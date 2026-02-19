@@ -1,0 +1,66 @@
+import { create } from 'zustand';
+import type { Peca, HistoricoPreco } from '../types';
+import { api } from '../lib/api';
+
+interface PaginatedPecas {
+  data: Peca[];
+  meta: { total: number; page: number; limit: number; pages: number };
+}
+
+interface EstoqueStore {
+  pecas: Peca[];
+  loading: boolean;
+  error: string | null;
+  fetchPecas: (q?: string) => Promise<void>;
+  adicionarPeca: (data: Omit<Peca, 'id' | 'usoTotal' | 'historicoPrecos'>) => Promise<Peca>;
+  editarPeca: (id: string, data: Partial<Peca>) => Promise<void>;
+  removerPeca: (id: string) => Promise<void>;
+  buscarPeca: (id: string) => Peca | undefined;
+  adicionarHistoricoPreco: (pecaId: string, historico: Omit<HistoricoPreco, 'data'>) => Promise<void>;
+  pecasAbaixoMinimo: () => Peca[];
+}
+
+export const useEstoqueStore = create<EstoqueStore>((set, get) => ({
+  pecas: [],
+  loading: false,
+  error: null,
+
+  fetchPecas: async (q = '') => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.get<PaginatedPecas>(`/estoque?limit=200&q=${encodeURIComponent(q)}`);
+      set({ pecas: res.data, loading: false });
+    } catch (err) {
+      set({ error: (err as Error).message, loading: false });
+    }
+  },
+
+  adicionarPeca: async (data) => {
+    const peca = await api.post<Peca>('/estoque', data);
+    set((s) => ({ pecas: [...s.pecas, peca] }));
+    return peca;
+  },
+
+  editarPeca: async (id, data) => {
+    const atualizada = await api.put<Peca>(`/estoque/${id}`, data);
+    set((s) => ({
+      pecas: s.pecas.map((p) => (p.id === id ? atualizada : p)),
+    }));
+  },
+
+  removerPeca: async (id) => {
+    await api.delete(`/estoque/${id}`);
+    set((s) => ({ pecas: s.pecas.filter((p) => p.id !== id) }));
+  },
+
+  buscarPeca: (id) => get().pecas.find((p) => p.id === id),
+
+  adicionarHistoricoPreco: async (pecaId, historico) => {
+    const atualizada = await api.post<Peca>(`/estoque/${pecaId}/historico-preco`, historico);
+    set((s) => ({
+      pecas: s.pecas.map((p) => (p.id === pecaId ? atualizada : p)),
+    }));
+  },
+
+  pecasAbaixoMinimo: () => get().pecas.filter((p) => p.quantidade <= p.estoqueMinimo),
+}));
