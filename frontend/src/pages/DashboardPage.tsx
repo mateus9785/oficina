@@ -141,7 +141,7 @@ export function DashboardPage() {
                       <span className="font-bold text-blue-600 text-sm">#{os.numero}</span>
                       <Badge className={STATUS_OS_COLORS[os.status]}>{STATUS_OS_LABELS[os.status]}</Badge>
                     </div>
-                    <p className="text-sm text-gray-900 truncate">{os.descricaoProblema}</p>
+                    <p className="text-sm text-gray-900 truncate">{os.descricao}</p>
                     <p className="text-xs text-gray-500">{cliente?.nome} - {veiculo?.marca} {veiculo?.modelo}</p>
                   </div>
                   <div className="text-right">

@@ -4,7 +4,16 @@ import { pool } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { getPagination, paginatedResponse } from '../utils/pagination';
 
+/** Data de hoje no fuso horário do Brasil (America/Sao_Paulo), formato YYYY-MM-DD. */
+function hojeLocal(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
+
 function mapConta(r: any) {
+  const hojeStr = hojeLocal();
+  const vencStr = new Date(r.data_vencimento).toISOString().slice(0, 10);
+  // 'atrasado' é sempre computado: nunca confia no valor gravado
+  let status = r.status === 'pago' ? 'pago' : (vencStr < hojeStr ? 'atrasado' : 'pendente');
   return {
     id: r.id,
     tipo: r.tipo,
@@ -13,39 +22,56 @@ function mapConta(r: any) {
     valor: parseFloat(r.valor),
     dataVencimento: r.data_vencimento,
     dataPagamento: r.data_pagamento ?? undefined,
-    status: r.status,
+    status,
     ordemServicoId: r.ordem_servico_id ?? undefined,
     observacoes: r.observacoes,
   };
 }
 
 export async function listar(req: Request, res: Response): Promise<void> {
-  const { page, limit, offset } = getPagination(req);
+  const { page, limit, offset, sqlLimit, sqlOffset } = getPagination(req);
   const tipo = (req.query.tipo as string) || '';
   const status = (req.query.status as string) || '';
 
+  const hoje = hojeLocal();
   let where = 'WHERE 1=1';
   const params: any[] = [];
   if (tipo) { where += ' AND tipo = ?'; params.push(tipo); }
-  if (status) { where += ' AND status = ?'; params.push(status); }
+  if (status === 'atrasado') {
+    where += " AND status != 'pago' AND DATE(data_vencimento) < ?"; params.push(hoje);
+  } else if (status === 'pendente') {
+    where += " AND status != 'pago' AND DATE(data_vencimento) >= ?"; params.push(hoje);
+  } else if (status) {
+    where += ' AND status = ?'; params.push(status);
+  }
 
   const [countRows] = await pool.execute(`SELECT COUNT(*) as total FROM contas ${where}`, params);
   const total = (countRows as any[])[0].total as number;
 
   const [rows] = await pool.execute(
-    `SELECT * FROM contas ${where} ORDER BY data_vencimento DESC LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+    `SELECT * FROM contas ${where}
+     ORDER BY
+       CASE
+         WHEN status != 'pago' AND DATE(data_vencimento) < ? THEN 1
+         WHEN status != 'pago' THEN 2
+         WHEN status = 'pago' THEN 3
+         ELSE 4
+       END,
+       data_vencimento ASC
+     LIMIT ? OFFSET ?`,
+    [...params, hoje, sqlLimit, sqlOffset]
   );
 
   res.json(paginatedResponse((rows as any[]).map(mapConta), total, { page, limit, offset }));
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { tipo, categoria, descricao, valor, dataVencimento, status = 'pendente', ordemServicoId, observacoes = '' } = req.body;
+  const { tipo, categoria, descricao = '', valor, dataVencimento, status = 'pendente', ordemServicoId, observacoes = '' } = req.body;
+  const mysqlDate = new Date(dataVencimento).toISOString().slice(0, 19).replace('T', ' ');
   const id = uuidv4();
   await pool.execute(
     'INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, status, ordem_servico_id, observacoes) VALUES (?,?,?,?,?,?,?,?,?)',
-    [id, tipo, categoria, descricao, valor, dataVencimento, status, ordemServicoId ?? null, observacoes]
+    [id, tipo, categoria, descricao, valor, mysqlDate, status, ordemServicoId ?? null, observacoes]
   );
   const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [id]);
   res.status(201).json(mapConta((rows as any[])[0]));
@@ -59,10 +85,11 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { tipo, categoria, descricao, valor, dataVencimento, status, ordemServicoId, observacoes } = req.body;
+  const { tipo, categoria, descricao = '', valor, dataVencimento, status, ordemServicoId, observacoes } = req.body;
+  const mysqlDate = new Date(dataVencimento).toISOString().slice(0, 19).replace('T', ' ');
   const [result] = await pool.execute(
     'UPDATE contas SET tipo=?, categoria=?, descricao=?, valor=?, data_vencimento=?, status=?, ordem_servico_id=?, observacoes=? WHERE id=?',
-    [tipo, categoria, descricao, valor, dataVencimento, status ?? 'pendente', ordemServicoId ?? null, observacoes ?? '', req.params.id]
+    [tipo, categoria, descricao, valor, mysqlDate, status ?? 'pendente', ordemServicoId ?? null, observacoes ?? '', req.params.id]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Conta não encontrada.');
   const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [req.params.id]);

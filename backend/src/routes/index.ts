@@ -7,6 +7,7 @@ import estoqueRoutes from './estoque.routes';
 import financeiroRoutes from './financeiro.routes';
 import usuariosRoutes from './usuarios.routes';
 import relatoriosRoutes from './relatorios.routes';
+import notificacoesRoutes from './notificacoes.routes';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/estoque', estoqueRoutes);
 router.use('/financeiro', financeiroRoutes);
 router.use('/usuarios', usuariosRoutes);
 router.use('/relatorios', relatoriosRoutes);
+router.use('/notificacoes', notificacoesRoutes);
 
 export default router;

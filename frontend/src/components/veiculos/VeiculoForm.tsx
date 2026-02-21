@@ -30,7 +30,7 @@ export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clien
       setTipo(veiculo.tipo);
       setMarca(veiculo.marca);
       setModelo(veiculo.modelo);
-      setAno(String(veiculo.ano));
+      setAno(veiculo.ano != null ? String(veiculo.ano) : '');
       setPlaca(veiculo.placa);
       setCor(veiculo.cor);
       setObservacoes(veiculo.observacoes);
@@ -53,7 +53,7 @@ export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clien
       tipo,
       marca,
       modelo,
-      ano: Number(ano),
+      ano: ano !== '' ? Number(ano) : null,
       placa: placa.toUpperCase(),
       cor,
       observacoes,
@@ -69,8 +69,9 @@ export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clien
             label="Cliente"
             value={selectedClienteId}
             onChange={(e) => setSelectedClienteId(e.target.value)}
-            options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
-            required
+            placeholder="Selecione um cliente"
+          options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
+          required
           />
         )}
         <Select

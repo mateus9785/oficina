@@ -9,14 +9,15 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(dateStr: string): string {
-  return format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR });
+  return format(parseISO(dateStr.slice(0, 10)), 'dd/MM/yyyy', { locale: ptBR });
 }
 
 export function formatDateTime(dateStr: string): string {
   return format(parseISO(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 }
 
-export function formatPhone(phone: string): string {
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return '—';
   const cleaned = phone.replace(/\D/g, '');
   if (cleaned.length === 11) {
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
@@ -31,7 +32,8 @@ export function formatPlaca(placa: string): string {
   return placa.toUpperCase();
 }
 
-export function formatCpfCnpj(value: string): string {
+export function formatCpfCnpj(value: string | null | undefined): string {
+  if (!value) return '—';
   const cleaned = value.replace(/\D/g, '');
   if (cleaned.length === 11) {
     return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;

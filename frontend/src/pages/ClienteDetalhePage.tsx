@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Plus, Car, Bike, Phone, Mail, MapPin } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Car, Bike, Phone, Mail, MapPin, Cake } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -82,15 +83,23 @@ export function ClienteDetalhePage() {
                 <span>{cliente.email}</span>
               </div>
             )}
-            {cliente.endereco && (
+            {cliente.dataNascimento && (
               <div className="flex items-center gap-2 text-gray-600">
-                <MapPin size={16} />
-                <span>{cliente.endereco}</span>
+                <Cake size={16} />
+                <span>{formatDate(cliente.dataNascimento)}</span>
               </div>
             )}
-            {cliente.observacoes && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg text-gray-600">
-                {cliente.observacoes}
+            {(cliente.rua || cliente.cidade) && (
+              <div className="flex items-start gap-2 text-gray-600">
+                <MapPin size={16} className="mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  {cliente.rua && (
+                    <p>{cliente.rua}{cliente.numero ? `, ${cliente.numero}` : ''}{cliente.complemento ? ` — ${cliente.complemento}` : ''}</p>
+                  )}
+                  {(cliente.cidade || cliente.estado) && (
+                    <p>{[cliente.cidade, cliente.estado].filter(Boolean).join(' - ')}{cliente.cep ? ` · ${cliente.cep}` : ''}</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -119,7 +128,7 @@ export function ClienteDetalhePage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900">{v.marca} {v.modelo}</p>
-                    <p className="text-sm text-gray-500">{v.placa} - {v.ano} - {v.cor}</p>
+                    <p className="text-sm text-gray-500">{v.placa}{v.ano ? ` - ${v.ano}` : ''}{v.cor ? ` - ${v.cor}` : ''}</p>
                   </div>
                 </div>
               ))}
@@ -131,23 +140,42 @@ export function ClienteDetalhePage() {
       <ClienteForm
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
-        onSave={(data) => editarCliente(cliente.id, data)}
+        onSave={async (data) => {
+          try {
+            await editarCliente(cliente.id, data);
+            toast.success('Cliente atualizado com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao atualizar cliente.');
+          }
+        }}
         cliente={cliente}
       />
 
       <VeiculoForm
         isOpen={veiculoFormOpen}
         onClose={() => setVeiculoFormOpen(false)}
-        onSave={(data) => adicionarVeiculo(data)}
+        onSave={async (data) => {
+          try {
+            await adicionarVeiculo(data);
+            toast.success('Veículo cadastrado com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao cadastrar veículo.');
+          }
+        }}
         clienteId={cliente.id}
       />
 
       <ConfirmDialog
         isOpen={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        onConfirm={() => {
-          removerCliente(cliente.id);
-          navigate('/clientes');
+        onConfirm={async () => {
+          try {
+            await removerCliente(cliente.id);
+            toast.success('Cliente excluído com sucesso!');
+            navigate('/clientes');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao excluir cliente.');
+          }
         }}
         title="Excluir Cliente"
         message={`Tem certeza que deseja excluir o cliente "${cliente.nome}"? Esta ação não pode ser desfeita.`}

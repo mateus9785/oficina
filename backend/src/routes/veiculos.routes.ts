@@ -13,7 +13,7 @@ const bodyRules = [
   body('tipo').isIn(['carro', 'moto']).withMessage('tipo deve ser carro ou moto.'),
   body('marca').optional().trim(),
   body('modelo').optional().trim(),
-  body('ano').optional().isInt({ min: 1900, max: 2100 }),
+  body('ano').optional({ nullable: true }).isInt({ min: 1900, max: 2100 }),
   body('placa').trim().notEmpty().withMessage('Placa obrigatória.'),
   body('cor').optional().trim(),
   body('km').optional().isInt({ min: 0 }),

@@ -10,9 +10,9 @@ router.use(requireAuth);
 
 const bodyRules = [
   body('nome').trim().notEmpty().withMessage('Nome obrigatório.'),
-  body('cpfCnpj').trim().notEmpty().withMessage('CPF/CNPJ obrigatório.'),
+  body('cpfCnpj').optional({ checkFalsy: true }).trim(),
   body('telefone').optional().trim(),
-  body('email').optional().isEmail().withMessage('Email inválido.'),
+  body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email inválido.'),
   body('endereco').optional().trim(),
   body('observacoes').optional().trim(),
 ];

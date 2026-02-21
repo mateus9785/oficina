@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -75,7 +76,18 @@ export function EstoquePage() {
         </Card>
       )}
 
-      <PecaForm isOpen={formOpen} onClose={() => setFormOpen(false)} onSave={(data) => adicionarPeca(data)} />
+      <PecaForm
+        isOpen={formOpen}
+        onClose={() => setFormOpen(false)}
+        onSave={async (data) => {
+          try {
+            await adicionarPeca(data);
+            toast.success('Peça cadastrada com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao cadastrar peça.');
+          }
+        }}
+      />
     </div>
   );
 }

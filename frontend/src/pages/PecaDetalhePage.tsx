@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, TrendingUp, Package, MapPin, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -119,16 +120,31 @@ export function PecaDetalhePage() {
       <PecaForm
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
-        onSave={(data) => editarPeca(peca.id, data)}
+        onSave={async (data) => {
+          try {
+            await editarPeca(peca.id, data);
+            toast.success('Peça atualizada com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao atualizar peça.');
+          }
+        }}
         peca={peca}
       />
 
       <ConfirmDialog
         isOpen={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        onConfirm={() => { removerPeca(peca.id); navigate('/estoque'); }}
+        onConfirm={async () => {
+          try {
+            await removerPeca(peca.id);
+            toast.success('Peça excluída com sucesso!');
+            navigate('/estoque');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao excluir peça.');
+          }
+        }}
         title="Excluir Peça"
-        message={`Tem certeza que deseja excluir "${peca.nome}"?`}
+        message={`Tem certeza que deseja excluir "${peca.nome}"? Esta ação não pode ser desfeita.`}
       />
     </div>
   );

@@ -46,7 +46,7 @@ export function KanbanCard({ ordem, onClick }: KanbanCardProps) {
         </span>
       </div>
 
-      <p className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">{ordem.descricaoProblema}</p>
+      <p className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">{ordem.descricao}</p>
 
       {cliente && (
         <p className="text-xs text-gray-500 mb-2">{cliente.nome}</p>

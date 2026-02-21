@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2, Car, Bike, User, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -54,7 +55,7 @@ export function VeiculoDetalhePage() {
 
       <PageHeader
         title={`${veiculo.marca} ${veiculo.modelo}`}
-        description={`${formatPlaca(veiculo.placa)} - ${veiculo.ano}`}
+        description={veiculo.ano ? `${formatPlaca(veiculo.placa)} - ${veiculo.ano}` : formatPlaca(veiculo.placa)}
         actions={
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setEditOpen(true)}>
@@ -89,7 +90,7 @@ export function VeiculoDetalhePage() {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Ano</span>
-              <span className="font-medium">{veiculo.ano}</span>
+              <span className="font-medium">{veiculo.ano ?? '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Placa</span>
@@ -146,7 +147,7 @@ export function VeiculoDetalhePage() {
                     <span className="text-sm font-bold text-blue-600">#{os.numero}</span>
                     <Badge className={STATUS_OS_COLORS[os.status]}>{STATUS_OS_LABELS[os.status]}</Badge>
                   </div>
-                  <p className="text-sm text-gray-700">{os.descricaoProblema}</p>
+                  <p className="text-sm text-gray-700">{os.descricao}</p>
                   <div className="flex justify-between mt-1 text-xs text-gray-500">
                     <span>{formatDate(os.dataAbertura)}</span>
                     <span className="font-medium text-gray-900">{formatCurrency(calcularTotalOS(os))}</span>
@@ -161,7 +162,14 @@ export function VeiculoDetalhePage() {
       <VeiculoForm
         isOpen={editOpen}
         onClose={() => setEditOpen(false)}
-        onSave={(data) => editarVeiculo(veiculo.id, data)}
+        onSave={async (data) => {
+          try {
+            await editarVeiculo(veiculo.id, data);
+            toast.success('Veículo atualizado com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao atualizar veículo.');
+          }
+        }}
         veiculo={veiculo}
         clienteId={veiculo.clienteId}
       />
@@ -169,12 +177,17 @@ export function VeiculoDetalhePage() {
       <ConfirmDialog
         isOpen={deleteOpen}
         onClose={() => setDeleteOpen(false)}
-        onConfirm={() => {
-          removerVeiculo(veiculo.id);
-          navigate(-1);
+        onConfirm={async () => {
+          try {
+            await removerVeiculo(veiculo.id);
+            toast.success('Veículo excluído com sucesso!');
+            navigate(-1);
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao excluir veículo.');
+          }
         }}
         title="Excluir Veículo"
-        message={`Tem certeza que deseja excluir o veículo "${veiculo.marca} ${veiculo.modelo}" (${veiculo.placa})?`}
+        message={`Tem certeza que deseja excluir o veículo "${veiculo.marca} ${veiculo.modelo}" (${veiculo.placa})? Esta ação não pode ser desfeita.`}
       />
     </div>
   );

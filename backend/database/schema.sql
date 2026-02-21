@@ -2,6 +2,8 @@
 -- Oficina Mecânica — DDL completo
 -- ============================================================
 
+-- Note: run `npm run db:migrate` to apply schema changes
+
 CREATE DATABASE IF NOT EXISTS oficina CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE oficina;
 
@@ -25,16 +27,23 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- clientes
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clientes (
-  id            CHAR(36)      NOT NULL,
-  nome          VARCHAR(120)  NOT NULL,
-  cpf_cnpj      VARCHAR(20)   NOT NULL,
-  telefone      VARCHAR(20)   NOT NULL DEFAULT '',
-  email         VARCHAR(120)  NOT NULL DEFAULT '',
-  endereco      VARCHAR(500)  NOT NULL DEFAULT '',
-  observacoes   VARCHAR(1000) NOT NULL DEFAULT '',
-  data_cadastro DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  criado_em     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  atualizado_em DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  id             CHAR(36)      NOT NULL,
+  nome           VARCHAR(120)  NOT NULL,
+  cpf_cnpj       VARCHAR(20)   NULL DEFAULT NULL,
+  telefone       VARCHAR(20)   NOT NULL DEFAULT '',
+  email          VARCHAR(120)  NOT NULL DEFAULT '',
+  endereco       VARCHAR(500)  NOT NULL DEFAULT '',
+  data_nascimento DATE          NULL DEFAULT NULL,
+  cep            VARCHAR(10)   NOT NULL DEFAULT '',
+  cidade         VARCHAR(80)   NOT NULL DEFAULT '',
+  estado         CHAR(2)       NOT NULL DEFAULT '',
+  rua            VARCHAR(200)  NOT NULL DEFAULT '',
+  numero         VARCHAR(20)   NOT NULL DEFAULT '',
+  complemento    VARCHAR(100)  NOT NULL DEFAULT '',
+  observacoes    VARCHAR(1000) NOT NULL DEFAULT '',
+  data_cadastro  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  criado_em      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  atualizado_em  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_cliente_cpf_cnpj (cpf_cnpj)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -48,7 +57,7 @@ CREATE TABLE IF NOT EXISTS veiculos (
   tipo          ENUM('carro','moto') NOT NULL DEFAULT 'carro',
   marca         VARCHAR(60)   NOT NULL DEFAULT '',
   modelo        VARCHAR(80)   NOT NULL DEFAULT '',
-  ano           SMALLINT      NOT NULL,
+  ano           SMALLINT      NULL DEFAULT NULL,
   placa         VARCHAR(10)   NOT NULL,
   cor           VARCHAR(40)   NOT NULL DEFAULT '',
   km            INT UNSIGNED  NOT NULL DEFAULT 0,
@@ -107,10 +116,9 @@ CREATE TABLE IF NOT EXISTS ordens_servico (
   status              ENUM('aguardando_aprovacao','aguardando_peca','em_execucao','pronto_retirada','finalizado') NOT NULL DEFAULT 'aguardando_aprovacao',
   data_abertura       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   data_finalizacao    DATETIME      NULL,
-  descricao_problema  VARCHAR(2000) NOT NULL DEFAULT '',
-  diagnostico         VARCHAR(2000) NOT NULL DEFAULT '',
-  observacoes         VARCHAR(2000) NOT NULL DEFAULT '',
+  descricao           VARCHAR(2000) NOT NULL DEFAULT '',
   km_entrada          INT UNSIGNED  NOT NULL DEFAULT 0,
+  previsao_entrega    DATETIME      NULL,
   criado_em           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   atualizado_em       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -166,7 +174,7 @@ CREATE TABLE IF NOT EXISTS contas (
   valor             DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   data_vencimento   DATETIME      NOT NULL,
   data_pagamento    DATETIME      NULL,
-  status            ENUM('pendente','pago','atrasado') NOT NULL DEFAULT 'pendente',
+  status            ENUM('pendente','pago') NOT NULL DEFAULT 'pendente',
   ordem_servico_id  CHAR(36)      NULL,
   observacoes       VARCHAR(1000) NOT NULL DEFAULT '',
   criado_em         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -177,4 +185,20 @@ CREATE TABLE IF NOT EXISTS contas (
   KEY idx_conta_vencimento (data_vencimento),
   KEY idx_conta_os (ordem_servico_id),
   CONSTRAINT fk_conta_os FOREIGN KEY (ordem_servico_id) REFERENCES ordens_servico (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ------------------------------------------------------------
+-- anexos_os (imagens e vídeos vinculados a uma OS)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS anexos_os (
+  id            CHAR(36)      NOT NULL,
+  ordem_id      CHAR(36)      NOT NULL,
+  nome_original VARCHAR(255)  NOT NULL,
+  caminho       VARCHAR(500)  NOT NULL,
+  tipo_mime     VARCHAR(100)  NOT NULL,
+  tamanho       INT UNSIGNED  NOT NULL DEFAULT 0,
+  criado_em     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_anexo_ordem (ordem_id),
+  CONSTRAINT fk_anexo_ordem FOREIGN KEY (ordem_id) REFERENCES ordens_servico (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

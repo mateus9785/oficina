@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
 import { env } from './config/env';
 import apiRoutes from './routes/index';
 import { errorHandler, notFound } from './middleware/errorHandler';
@@ -10,7 +11,7 @@ export function createApp() {
   const app = express();
 
   // Security & parsing
-  app.use(helmet());
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -22,6 +23,9 @@ export function createApp() {
 
   // Health check
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+  // Arquivos estáticos (uploads)
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // API
   app.use('/api/v1', apiRoutes);

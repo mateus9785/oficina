@@ -16,8 +16,7 @@ interface OrdemServicoFormProps {
     veiculoId: string;
     status: StatusOS;
     dataAbertura: string;
-    descricaoProblema: string;
-    diagnostico: string;
+    descricao: string;
     observacoes: string;
     kmEntrada: number;
   }) => void;
@@ -28,8 +27,7 @@ export function OrdemServicoForm({ isOpen, onClose, onSave }: OrdemServicoFormPr
   const { veiculos } = useVeiculoStore();
   const [clienteId, setClienteId] = useState('');
   const [veiculoId, setVeiculoId] = useState('');
-  const [descricaoProblema, setDescricaoProblema] = useState('');
-  const [diagnostico, setDiagnostico] = useState('');
+  const [descricao, setDescricao] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [kmEntrada, setKmEntrada] = useState('');
 
@@ -44,13 +42,12 @@ export function OrdemServicoForm({ isOpen, onClose, onSave }: OrdemServicoFormPr
       veiculoId,
       status: 'aguardando_aprovacao',
       dataAbertura: new Date().toISOString(),
-      descricaoProblema,
-      diagnostico,
+      descricao,
       observacoes,
       kmEntrada: Number(kmEntrada),
     });
-    setClienteId(''); setVeiculoId(''); setDescricaoProblema('');
-    setDiagnostico(''); setObservacoes(''); setKmEntrada('');
+    setClienteId(''); setVeiculoId(''); setDescricao('');
+    setObservacoes(''); setKmEntrada('');
     onClose();
   };
 
@@ -75,8 +72,7 @@ export function OrdemServicoForm({ isOpen, onClose, onSave }: OrdemServicoFormPr
           required
         />
         <Input label="KM de Entrada" type="number" value={kmEntrada} onChange={(e) => setKmEntrada(e.target.value)} />
-        <Textarea label="Descrição do Problema" value={descricaoProblema} onChange={(e) => setDescricaoProblema(e.target.value)} required />
-        <Textarea label="Diagnóstico" value={diagnostico} onChange={(e) => setDiagnostico(e.target.value)} />
+        <Textarea label="Descrição" value={descricao} onChange={(e) => setDescricao(e.target.value)} required />
         <Textarea label="Observações" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>

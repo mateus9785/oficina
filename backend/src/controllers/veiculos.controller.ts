@@ -19,7 +19,7 @@ function mapVeiculo(r: any) {
 }
 
 export async function listar(req: Request, res: Response): Promise<void> {
-  const { page, limit, offset } = getPagination(req);
+  const { page, limit, offset, sqlLimit, sqlOffset } = getPagination(req);
   const search = (req.query.q as string) || '';
   const like = `%${search}%`;
 
@@ -31,7 +31,7 @@ export async function listar(req: Request, res: Response): Promise<void> {
 
   const [rows] = await pool.execute(
     'SELECT * FROM veiculos WHERE placa LIKE ? OR marca LIKE ? OR modelo LIKE ? ORDER BY modelo LIMIT ? OFFSET ?',
-    [like, like, like, limit, offset]
+    [like, like, like, sqlLimit, sqlOffset]
   );
 
   res.json(paginatedResponse((rows as any[]).map(mapVeiculo), total, { page, limit, offset }));

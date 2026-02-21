@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -57,7 +58,14 @@ export function ClientesPage() {
       <ClienteForm
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
-        onSave={(data) => adicionarCliente(data)}
+        onSave={async (data) => {
+          try {
+            await adicionarCliente(data);
+            toast.success('Cliente cadastrado com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao cadastrar cliente.');
+          }
+        }}
       />
     </div>
   );

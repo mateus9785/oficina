@@ -3,11 +3,13 @@ import { CATEGORIA_CONTA_LABELS } from '../../types';
 import { Table } from '../ui/Table';
 import { Badge } from '../ui/Badge';
 import { formatCurrency, formatDate } from '../../lib/formatters';
-import { CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 
 interface ContasListProps {
   contas: Conta[];
   onPagar?: (id: string) => void;
+  onEditar?: (conta: Conta) => void;
+  onRemover?: (conta: Conta) => void;
 }
 
 const statusConfig = {
@@ -16,7 +18,7 @@ const statusConfig = {
   atrasado: { icon: AlertTriangle, className: 'bg-red-100 text-red-800 border-red-300' },
 };
 
-export function ContasList({ contas, onPagar }: ContasListProps) {
+export function ContasList({ contas, onPagar, onEditar, onRemover }: ContasListProps) {
   const columns = [
     {
       key: 'tipo',
@@ -64,7 +66,7 @@ export function ContasList({ contas, onPagar }: ContasListProps) {
               <Icon size={12} className="mr-1" />
               {c.status === 'pago' ? 'Pago' : c.status === 'pendente' ? 'Pendente' : 'Atrasado'}
             </Badge>
-            {onPagar && c.status === 'pendente' && (
+            {onPagar && (c.status === 'pendente' || c.status === 'atrasado') && (
               <button
                 onClick={(e) => { e.stopPropagation(); onPagar(c.id); }}
                 className="text-xs text-blue-600 hover:underline"
@@ -75,6 +77,32 @@ export function ContasList({ contas, onPagar }: ContasListProps) {
           </div>
         );
       },
+    },
+    {
+      key: 'acoes',
+      header: '',
+      render: (c: Conta) => (
+        <div className="flex items-center gap-2 justify-end">
+          {onEditar && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEditar(c); }}
+              className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+              title="Editar"
+            >
+              <Pencil size={15} />
+            </button>
+          )}
+          {onRemover && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemover(c); }}
+              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+              title="Excluir"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
 

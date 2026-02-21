@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body, param } from 'express-validator';
 import * as ctrl from '../controllers/ordens.controller';
+import * as anexosCtrl from '../controllers/anexos.controller';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -14,7 +15,7 @@ router.post(
   [
     body('clienteId').isUUID(),
     body('veiculoId').isUUID(),
-    body('descricaoProblema').trim().notEmpty(),
+    body('descricao').optional().trim(),
     body('kmEntrada').optional().isInt({ min: 0 }),
   ],
   validate,
@@ -23,7 +24,13 @@ router.post(
 router.get('/:id', param('id').isUUID(), validate, asyncHandler(ctrl.buscar));
 router.put(
   '/:id',
-  [param('id').isUUID(), body('descricaoProblema').optional().trim()],
+  [
+    param('id').isUUID(),
+    body('descricao').optional().trim(),
+    body('kmEntrada').optional().isInt({ min: 0 }),
+    body('clienteId').optional().isUUID(),
+    body('veiculoId').optional().isUUID(),
+  ],
   validate,
   asyncHandler(ctrl.editar)
 );
@@ -73,5 +80,26 @@ router.delete(
 
 // Checklist
 router.put('/:id/checklist', param('id').isUUID(), validate, asyncHandler(ctrl.atualizarChecklist));
+
+// Anexos (imagens e vídeos)
+router.get('/:id/anexos', param('id').isUUID(), validate, asyncHandler(anexosCtrl.listar));
+router.post(
+  '/:id/anexos',
+  param('id').isUUID(),
+  validate,
+  (req, res, next) => {
+    anexosCtrl.uploadMiddleware(req, res, (err) => {
+      if (err) return next(err);
+      next();
+    });
+  },
+  asyncHandler(anexosCtrl.upload)
+);
+router.delete(
+  '/:id/anexos/:anexoId',
+  [param('id').isUUID(), param('anexoId').isUUID()],
+  validate,
+  asyncHandler(anexosCtrl.remover)
+);
 
 export default router;

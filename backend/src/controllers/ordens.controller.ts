@@ -35,9 +35,8 @@ function mapOrdem(r: any, itens: any[] = [], checklist: any[] = []) {
     status: r.status,
     dataAbertura: r.data_abertura,
     dataFinalizacao: r.data_finalizacao ?? undefined,
-    descricaoProblema: r.descricao_problema,
-    diagnostico: r.diagnostico,
-    observacoes: r.observacoes,
+    previsaoEntrega: r.previsao_entrega ?? undefined,
+    descricao: r.descricao,
     kmEntrada: r.km_entrada,
     itens: itens.map(mapItem),
     checklistEntrada: checklist.map(mapChecklist),
@@ -57,7 +56,7 @@ async function fetchOrdemCompleta(id: string, conn?: PoolConnection) {
 // ---------- Controllers ----------
 
 export async function listar(req: Request, res: Response): Promise<void> {
-  const { page, limit, offset } = getPagination(req);
+  const { page, limit, offset, sqlLimit, sqlOffset } = getPagination(req);
   const status = (req.query.status as string) || '';
   const clienteId = (req.query.clienteId as string) || '';
 
@@ -71,7 +70,7 @@ export async function listar(req: Request, res: Response): Promise<void> {
 
   const [rows] = await pool.execute(
     `SELECT * FROM ordens_servico ${where} ORDER BY data_abertura DESC LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+    [...params, sqlLimit, sqlOffset]
   );
 
   const ordens = await Promise.all(
@@ -82,11 +81,11 @@ export async function listar(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { clienteId, veiculoId, descricaoProblema, diagnostico = '', observacoes = '', kmEntrada = 0 } = req.body;
+  const { clienteId, veiculoId, descricao, kmEntrada = 0, previsaoEntrega } = req.body;
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO ordens_servico (id, cliente_id, veiculo_id, descricao_problema, diagnostico, observacoes, km_entrada) VALUES (?,?,?,?,?,?,?)',
-    [id, clienteId, veiculoId, descricaoProblema, diagnostico, observacoes, kmEntrada]
+    'INSERT INTO ordens_servico (id, cliente_id, veiculo_id, descricao, km_entrada, previsao_entrega) VALUES (?,?,?,?,?,?)',
+    [id, clienteId, veiculoId, descricao, kmEntrada, previsaoEntrega ?? null]
   );
   const ordem = await fetchOrdemCompleta(id);
   res.status(201).json(ordem);
@@ -99,13 +98,14 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { descricaoProblema, diagnostico, observacoes, kmEntrada } = req.body;
+  const { descricao, kmEntrada, clienteId, veiculoId, previsaoEntrega } = req.body;
   const sets: string[] = [];
   const vals: any[] = [];
-  if (descricaoProblema !== undefined) { sets.push('descricao_problema=?'); vals.push(descricaoProblema); }
-  if (diagnostico !== undefined) { sets.push('diagnostico=?'); vals.push(diagnostico); }
-  if (observacoes !== undefined) { sets.push('observacoes=?'); vals.push(observacoes); }
+  if (descricao !== undefined) { sets.push('descricao=?'); vals.push(descricao); }
   if (kmEntrada !== undefined) { sets.push('km_entrada=?'); vals.push(kmEntrada); }
+  if (clienteId !== undefined) { sets.push('cliente_id=?'); vals.push(clienteId); }
+  if (veiculoId !== undefined) { sets.push('veiculo_id=?'); vals.push(veiculoId); }
+  if (previsaoEntrega !== undefined) { sets.push('previsao_entrega=?'); vals.push(previsaoEntrega || null); }
   if (sets.length === 0) { res.status(400).json({ error: 'Nenhum campo para atualizar.' }); return; }
   vals.push(req.params.id);
   const [result] = await pool.execute(`UPDATE ordens_servico SET ${sets.join(',')} WHERE id=?`, vals);

@@ -5,9 +5,14 @@ export interface Cliente {
   cpfCnpj: string;
   telefone: string;
   email: string;
-  endereco: string;
+  dataNascimento: string | null;
+  cep: string;
+  cidade: string;
+  estado: string;
+  rua: string;
+  numero: string;
+  complemento: string;
   dataCadastro: string; // ISO date
-  observacoes: string;
 }
 
 // === Veículo ===
@@ -19,7 +24,7 @@ export interface Veiculo {
   tipo: TipoVeiculo;
   marca: string;
   modelo: string;
-  ano: number;
+  ano: number | null;
   placa: string;
   cor: string;
   observacoes: string;
@@ -80,12 +85,22 @@ export interface OrdemServico {
   status: StatusOS;
   dataAbertura: string;
   dataFinalizacao?: string;
-  descricaoProblema: string;
-  diagnostico: string;
+  previsaoEntrega?: string;
+  descricao: string;
   itens: ItemOS[];
   checklistEntrada: ChecklistDano[];
-  observacoes: string;
   kmEntrada: number;
+}
+
+// === Anexos OS ===
+export interface AnexoOS {
+  id: string;
+  ordemId: string;
+  nomeOriginal: string;
+  caminho: string;
+  tipoMime: string;
+  tamanho: number;
+  criadoEm: string;
 }
 
 // === Estoque / Peça ===

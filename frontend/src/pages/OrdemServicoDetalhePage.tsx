@@ -1,11 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Car, Bike, User, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+import { ArrowLeft, Car, Bike, User, FileText, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { OrdemItensTable } from '../components/ordens/OrdemItensTable';
+import { AnexosSection } from '../components/ordens/AnexosSection';
 import { useOrdemServicoStore } from '../stores/useOrdemServicoStore';
 import { useClienteStore } from '../stores/useClienteStore';
 import { useVeiculoStore } from '../stores/useVeiculoStore';
@@ -16,9 +19,11 @@ import { calcularTotalOS, calcularTotalPecas, calcularTotalServicos } from '../l
 export function OrdemServicoDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { buscarOrdem, adicionarItem, removerItem, fetchOrdens, ordens } = useOrdemServicoStore();
+  const { buscarOrdem, removerOrdem, fetchOrdens, ordens } = useOrdemServicoStore();
   const { buscarCliente, fetchClientes, clientes } = useClienteStore();
   const { buscarVeiculo, fetchVeiculos, veiculos } = useVeiculoStore();
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (ordens.length === 0) fetchOrdens();
@@ -39,7 +44,17 @@ export function OrdemServicoDetalhePage() {
 
   const cliente = buscarCliente(ordem.clienteId);
   const veiculo = buscarVeiculo(ordem.veiculoId);
-  const readOnly = ordem.status === 'finalizado';
+  const finalizado = ordem.status === 'finalizado';
+
+  async function handleDelete() {
+    try {
+      await removerOrdem(ordem.id);
+      toast.success('Ordem de serviço removida com sucesso!');
+      navigate('/ordens');
+    } catch (err) {
+      toast.error((err as Error).message || 'Erro ao remover ordem de serviço.');
+    }
+  }
 
   return (
     <div>
@@ -51,8 +66,21 @@ export function OrdemServicoDetalhePage() {
 
       <PageHeader
         title={`OS #${ordem.numero}`}
-        description={ordem.descricaoProblema}
-        actions={<Badge className={STATUS_OS_COLORS[ordem.status]}>{STATUS_OS_LABELS[ordem.status]}</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge className={STATUS_OS_COLORS[ordem.status]}>{STATUS_OS_LABELS[ordem.status]}</Badge>
+            {!finalizado && (
+              <>
+                <Button variant="secondary" onClick={() => navigate(`/ordens/${ordem.id}/editar`)}>
+                  <Pencil size={15} className="mr-1" /> Editar
+                </Button>
+                <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 size={15} className="mr-1" /> Apagar
+                </Button>
+              </>
+            )}
+          </div>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -62,20 +90,17 @@ export function OrdemServicoDetalhePage() {
           </h3>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Data Abertura</span><span>{formatDate(ordem.dataAbertura)}</span></div>
+            {ordem.previsaoEntrega && (
+              <div className="flex justify-between"><span className="text-gray-500">Previsão de Entrega</span><span>{formatDate(ordem.previsaoEntrega)}</span></div>
+            )}
             {ordem.dataFinalizacao && (
               <div className="flex justify-between"><span className="text-gray-500">Data Finalização</span><span>{formatDate(ordem.dataFinalizacao)}</span></div>
             )}
             <div className="flex justify-between"><span className="text-gray-500">KM Entrada</span><span>{formatKm(ordem.kmEntrada)}</span></div>
-            {ordem.diagnostico && (
+            {ordem.descricao && (
               <div className="mt-3">
-                <span className="text-gray-500 block mb-1">Diagnóstico</span>
-                <p className="bg-gray-50 p-2 rounded">{ordem.diagnostico}</p>
-              </div>
-            )}
-            {ordem.observacoes && (
-              <div className="mt-3">
-                <span className="text-gray-500 block mb-1">Observações</span>
-                <p className="bg-gray-50 p-2 rounded">{ordem.observacoes}</p>
+                <span className="text-gray-500 block mb-1">Descrição</span>
+                <p className="bg-gray-50 p-2 rounded">{ordem.descricao}</p>
               </div>
             )}
           </div>
@@ -104,7 +129,7 @@ export function OrdemServicoDetalhePage() {
               onClick={() => navigate(`/veiculos/${veiculo.id}`)}
             >
               <p className="font-medium">{veiculo.marca} {veiculo.modelo}</p>
-              <p className="text-sm text-gray-500">{veiculo.placa} - {veiculo.ano} - {veiculo.cor}</p>
+              <p className="text-sm text-gray-500">{veiculo.placa}{veiculo.ano ? ` - ${veiculo.ano}` : ''}{veiculo.cor ? ` - ${veiculo.cor}` : ''}</p>
             </div>
           )}
         </Card>
@@ -134,14 +159,26 @@ export function OrdemServicoDetalhePage() {
         </Card>
       </div>
 
-      <Card className="p-6">
+      <Card className="p-6 mb-6">
         <OrdemItensTable
           itens={ordem.itens}
-          onAdicionarItem={(item) => adicionarItem(ordem.id, item)}
-          onRemoverItem={(itemId) => removerItem(ordem.id, itemId)}
-          readOnly={readOnly}
+          onAdicionarItem={() => {}}
+          onRemoverItem={() => {}}
+          readOnly
         />
       </Card>
+
+      <Card className="p-6">
+        <AnexosSection ordemId={ordem.id} readOnly={finalizado} />
+      </Card>
+
+      <ConfirmDialog
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        title="Apagar Ordem de Serviço"
+        message={`Tem certeza que deseja apagar a OS #${ordem.numero}? Esta ação não pode ser desfeita e o estoque das peças será restaurado.`}
+      />
     </div>
   );
 }

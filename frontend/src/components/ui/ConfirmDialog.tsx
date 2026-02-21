@@ -5,7 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   title: string;
   message: string;
 }
@@ -22,7 +22,7 @@ export function ConfirmDialog({ isOpen, onClose, onConfirm, title, message }: Co
           <Button variant="secondary" className="flex-1" onClick={onClose}>
             Cancelar
           </Button>
-          <Button variant="danger" className="flex-1" onClick={() => { onConfirm(); onClose(); }}>
+          <Button variant="danger" className="flex-1" onClick={async () => { await onConfirm(); onClose(); }}>
             Confirmar
           </Button>
         </div>

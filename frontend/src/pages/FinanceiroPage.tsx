@@ -1,18 +1,22 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { FluxoCaixaDashboard } from '../components/financeiro/FluxoCaixaDashboard';
 import { ContasList } from '../components/financeiro/ContasList';
 import { ContaForm } from '../components/financeiro/ContaForm';
-import { GraficoReceitas } from '../components/financeiro/GraficoReceitas';
 import { useFinanceiroStore } from '../stores/useFinanceiroStore';
+import type { Conta } from '../types';
 
 export function FinanceiroPage() {
-  const { contas, adicionarConta, pagarConta, fetchContas } = useFinanceiroStore();
+  const { contas, adicionarConta, editarConta, removerConta, pagarConta, fetchContas } = useFinanceiroStore();
   const [formOpen, setFormOpen] = useState(false);
+  const [contaEditando, setContaEditando] = useState<Conta | undefined>(undefined);
+  const [contaRemover, setContaRemover] = useState<Conta | undefined>(undefined);
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
 
@@ -22,7 +26,12 @@ export function FinanceiroPage() {
     let result = contas;
     if (filtroTipo) result = result.filter((c) => c.tipo === filtroTipo);
     if (filtroStatus) result = result.filter((c) => c.status === filtroStatus);
-    return result.sort((a, b) => new Date(b.dataVencimento).getTime() - new Date(a.dataVencimento).getTime());
+    const priority = { atrasado: 0, pendente: 1, pago: 2 } as Record<string, number>;
+    return result.sort((a, b) => {
+      const diff = (priority[a.status] ?? 3) - (priority[b.status] ?? 3);
+      if (diff !== 0) return diff;
+      return new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime();
+    });
   }, [contas, filtroTipo, filtroStatus]);
 
   return (
@@ -38,11 +47,6 @@ export function FinanceiroPage() {
       />
 
       <FluxoCaixaDashboard contas={contas} />
-
-      <Card className="p-6 mt-6">
-        <h3 className="font-semibold text-gray-900 mb-4">Receitas x Despesas (6 meses)</h3>
-        <GraficoReceitas contas={contas} />
-      </Card>
 
       <Card className="mt-6">
         <div className="p-4 border-b flex flex-col sm:flex-row gap-4">
@@ -66,10 +70,57 @@ export function FinanceiroPage() {
             ]}
           />
         </div>
-        <ContasList contas={filtered} onPagar={pagarConta} />
+        <ContasList
+          contas={filtered}
+          onPagar={pagarConta}
+          onEditar={(conta) => setContaEditando(conta)}
+          onRemover={(conta) => setContaRemover(conta)}
+        />
       </Card>
 
-      <ContaForm isOpen={formOpen} onClose={() => setFormOpen(false)} onSave={(data) => adicionarConta(data)} />
+      <ContaForm
+        isOpen={formOpen}
+        onClose={() => setFormOpen(false)}
+        onSave={async (data) => {
+          try {
+            await adicionarConta(data);
+            toast.success('Conta cadastrada com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao cadastrar conta.');
+          }
+        }}
+      />
+
+      <ContaForm
+        isOpen={!!contaEditando}
+        conta={contaEditando}
+        onClose={() => setContaEditando(undefined)}
+        onSave={async (data) => {
+          try {
+            await editarConta(contaEditando!.id, data);
+            toast.success('Conta atualizada com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao atualizar conta.');
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={!!contaRemover}
+        onClose={() => setContaRemover(undefined)}
+        title="Excluir conta"
+        message={`Deseja excluir "${contaRemover?.descricao || 'esta conta'}"? Esta ação não pode ser desfeita.`}
+        onConfirm={async () => {
+          try {
+            await removerConta(contaRemover!.id);
+            toast.success('Conta excluída com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao excluir conta.');
+          } finally {
+            setContaRemover(undefined);
+          }
+        }}
+      />
     </div>
   );
 }

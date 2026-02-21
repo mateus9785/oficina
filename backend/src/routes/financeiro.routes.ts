@@ -11,7 +11,7 @@ router.use(requireAuth);
 const bodyRules = [
   body('tipo').isIn(['receita', 'despesa']),
   body('categoria').isIn(['ordem_servico','venda_peca','compra_peca','aluguel','salario','energia','agua','internet','manutencao','outros']),
-  body('descricao').trim().notEmpty(),
+  body('descricao').optional({ checkFalsy: true }).trim(),
   body('valor').isFloat({ min: 0.01 }),
   body('dataVencimento').isISO8601(),
   body('status').optional().isIn(['pendente','pago','atrasado']),

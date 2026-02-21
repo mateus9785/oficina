@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Car, Bike } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -94,7 +95,14 @@ export function VeiculosPage() {
       <VeiculoForm
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
-        onSave={(data) => adicionarVeiculo(data)}
+        onSave={async (data) => {
+          try {
+            await adicionarVeiculo(data);
+            toast.success('Veículo cadastrado com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao cadastrar veículo.');
+          }
+        }}
         clientes={clientes}
       />
     </div>

@@ -5,7 +5,7 @@ import { AppError } from '../middleware/errorHandler';
 import { getPagination, paginatedResponse } from '../utils/pagination';
 
 export async function listar(req: Request, res: Response): Promise<void> {
-  const { page, limit, offset } = getPagination(req);
+  const { page, limit, offset, sqlLimit, sqlOffset } = getPagination(req);
   const search = (req.query.q as string) || '';
   const like = `%${search}%`;
 
@@ -17,7 +17,7 @@ export async function listar(req: Request, res: Response): Promise<void> {
 
   const [rows] = await pool.execute(
     'SELECT * FROM clientes WHERE nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ? ORDER BY nome LIMIT ? OFFSET ?',
-    [like, like, like, limit, offset]
+    [like, like, like, sqlLimit, sqlOffset]
   );
 
   res.json(paginatedResponse(mapClientes(rows as any[]), total, { page, limit, offset }));
@@ -34,15 +34,24 @@ export async function verificarCpf(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { nome, cpfCnpj, telefone = '', email = '', endereco = '', observacoes = '' } = req.body;
-  if (cpfCnpj?.trim()) {
-    const [dup] = await pool.execute('SELECT id FROM clientes WHERE cpf_cnpj = ?', [cpfCnpj.trim()]);
+  const {
+    nome, cpfCnpj, telefone = '', email = '',
+    dataNascimento = null,
+    cep = '', cidade = '', estado = '', rua = '', numero = '', complemento = '',
+  } = req.body;
+  const cpf = cpfCnpj?.trim() || null;
+  if (cpf) {
+    const [dup] = await pool.execute('SELECT id FROM clientes WHERE cpf_cnpj = ?', [cpf]);
     if ((dup as any[]).length > 0) throw new AppError(409, 'CPF/CNPJ já cadastrado.');
   }
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO clientes (id, nome, cpf_cnpj, telefone, email, endereco, observacoes) VALUES (?,?,?,?,?,?,?)',
-    [id, nome, cpfCnpj, telefone, email, endereco, observacoes]
+    `INSERT INTO clientes
+       (id, nome, cpf_cnpj, telefone, email,
+        data_nascimento, cep, cidade, estado, rua, numero, complemento)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, nome, cpf, telefone, email,
+     dataNascimento || null, cep, cidade, estado, rua, numero, complemento]
   );
   const [rows] = await pool.execute('SELECT * FROM clientes WHERE id = ?', [id]);
   res.status(201).json(mapCliente((rows as any[])[0]));
@@ -56,17 +65,27 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { nome, cpfCnpj, telefone, email, endereco, observacoes } = req.body;
-  if (cpfCnpj?.trim()) {
+  const {
+    nome, cpfCnpj, telefone, email,
+    dataNascimento,
+    cep = '', cidade = '', estado = '', rua = '', numero = '', complemento = '',
+  } = req.body;
+  const cpf = cpfCnpj?.trim() || null;
+  if (cpf) {
     const [dup] = await pool.execute(
       'SELECT id FROM clientes WHERE cpf_cnpj = ? AND id != ?',
-      [cpfCnpj.trim(), req.params.id]
+      [cpf, req.params.id]
     );
     if ((dup as any[]).length > 0) throw new AppError(409, 'CPF/CNPJ já cadastrado.');
   }
   const [result] = await pool.execute(
-    'UPDATE clientes SET nome=?, cpf_cnpj=?, telefone=?, email=?, endereco=?, observacoes=? WHERE id=?',
-    [nome, cpfCnpj, telefone ?? '', email ?? '', endereco ?? '', observacoes ?? '', req.params.id]
+    `UPDATE clientes SET
+       nome=?, cpf_cnpj=?, telefone=?, email=?,
+       data_nascimento=?, cep=?, cidade=?, estado=?, rua=?, numero=?, complemento=?
+     WHERE id=?`,
+    [nome, cpf, telefone ?? '', email ?? '',
+     dataNascimento || null, cep, cidade, estado, rua, numero, complemento,
+     req.params.id]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Cliente não encontrado.');
   const [rows] = await pool.execute('SELECT * FROM clientes WHERE id = ?', [req.params.id]);
@@ -94,8 +113,13 @@ function mapCliente(r: any) {
     cpfCnpj: r.cpf_cnpj,
     telefone: r.telefone,
     email: r.email,
-    endereco: r.endereco,
-    observacoes: r.observacoes,
+    dataNascimento: r.data_nascimento ? r.data_nascimento.toISOString().split('T')[0] : null,
+    cep: r.cep ?? '',
+    cidade: r.cidade ?? '',
+    estado: r.estado ?? '',
+    rua: r.rua ?? '',
+    numero: r.numero ?? '',
+    complemento: r.complemento ?? '',
     dataCadastro: r.data_cadastro,
   };
 }
