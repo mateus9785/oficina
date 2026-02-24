@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ClienteForm } from '../components/clientes/ClienteForm';
 import { VeiculoForm } from '../components/veiculos/VeiculoForm';

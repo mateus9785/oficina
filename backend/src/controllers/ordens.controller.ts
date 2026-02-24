@@ -66,7 +66,7 @@ export async function listar(req: Request, res: Response): Promise<void> {
   if (clienteId) { where += ' AND cliente_id = ?'; params.push(clienteId); }
 
   const [countRows] = await pool.execute(`SELECT COUNT(*) as total FROM ordens_servico ${where}`, params);
-  const total = (countRows as any[])[0].total as number;
+  const total = Number((countRows as any[])[0].total);
 
   const [rows] = await pool.execute(
     `SELECT * FROM ordens_servico ${where} ORDER BY data_abertura DESC LIMIT ? OFFSET ?`,

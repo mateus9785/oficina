@@ -33,7 +33,6 @@ export interface ContaAlerta {
 
 export interface EstoqueBaixoItem {
   id: string;
-  codigo: string;
   nome: string;
   marca: string;
   quantidade: number;

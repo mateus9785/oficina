@@ -137,7 +137,6 @@ export interface HistoricoPreco {
 
 export interface Peca {
   id: string;
-  codigo: string;
   nome: string;
   categoria: CategoriaPeca;
   marca: string;

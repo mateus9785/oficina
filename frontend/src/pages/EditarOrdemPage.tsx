@@ -70,7 +70,7 @@ export function EditarOrdemPage() {
     if (!kmEntrada) { toast.error('Informe o KM de entrada.'); return; }
     setSalvando(true);
     try {
-      await editarOrdem(ordem.id, {
+      await editarOrdem(ordem!.id, {
         clienteId,
         veiculoId,
         descricao,
@@ -78,7 +78,7 @@ export function EditarOrdemPage() {
         previsaoEntrega: previsaoEntrega || undefined,
       });
       toast.success('Ordem de serviço atualizada com sucesso!');
-      navigate(`/ordens/${ordem.id}`);
+      navigate(`/ordens/${ordem!.id}`);
     } catch (err) {
       toast.error((err as Error).message || 'Erro ao salvar ordem de serviço.');
       setSalvando(false);

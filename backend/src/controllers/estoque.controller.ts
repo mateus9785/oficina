@@ -7,7 +7,6 @@ import { getPagination, paginatedResponse } from '../utils/pagination';
 function mapPeca(r: any, historico: any[] = []) {
   return {
     id: r.id,
-    codigo: r.codigo,
     nome: r.nome,
     categoria: r.categoria,
     marca: r.marca,
@@ -31,13 +30,13 @@ export async function listar(req: Request, res: Response): Promise<void> {
   const like = `%${search}%`;
 
   const [countRows] = await pool.execute(
-    'SELECT COUNT(*) as total FROM pecas WHERE nome LIKE ? OR codigo LIKE ? OR categoria LIKE ?',
+    'SELECT COUNT(*) as total FROM pecas WHERE nome LIKE ? OR marca LIKE ? OR categoria LIKE ?',
     [like, like, like]
   );
-  const total = (countRows as any[])[0].total as number;
+  const total = Number((countRows as any[])[0].total);
 
   const [rows] = await pool.execute(
-    'SELECT * FROM pecas WHERE nome LIKE ? OR codigo LIKE ? OR categoria LIKE ? ORDER BY nome LIMIT ? OFFSET ?',
+    'SELECT * FROM pecas WHERE nome LIKE ? OR marca LIKE ? OR categoria LIKE ? ORDER BY nome LIMIT ? OFFSET ?',
     [like, like, like, sqlLimit, sqlOffset]
   );
 
@@ -45,11 +44,11 @@ export async function listar(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { codigo, nome, categoria, marca = '', quantidade, estoqueMinimo = 0, precoCompra, precoVenda, localizacao = '' } = req.body;
+  const { nome, categoria, marca = '', quantidade, estoqueMinimo = 0, precoCompra, precoVenda, localizacao = '' } = req.body;
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO pecas (id, codigo, nome, categoria, marca, quantidade, estoque_minimo, preco_compra, preco_venda, localizacao) VALUES (?,?,?,?,?,?,?,?,?,?)',
-    [id, codigo, nome, categoria, marca, quantidade, estoqueMinimo, precoCompra, precoVenda, localizacao]
+    'INSERT INTO pecas (id, nome, categoria, marca, quantidade, estoque_minimo, preco_compra, preco_venda, localizacao) VALUES (?,?,?,?,?,?,?,?,?)',
+    [id, nome, categoria, marca, quantidade, estoqueMinimo, precoCompra, precoVenda, localizacao]
   );
   await pool.execute(
     'INSERT INTO historico_precos (peca_id, preco, fornecedor) VALUES (?, ?, ?)',
@@ -69,10 +68,10 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { codigo, nome, categoria, marca, quantidade, estoqueMinimo, precoCompra, precoVenda, localizacao } = req.body;
+  const { nome, categoria, marca, quantidade, estoqueMinimo, precoCompra, precoVenda, localizacao } = req.body;
   const [result] = await pool.execute(
-    'UPDATE pecas SET codigo=?, nome=?, categoria=?, marca=?, quantidade=?, estoque_minimo=?, preco_compra=?, preco_venda=?, localizacao=? WHERE id=?',
-    [codigo, nome, categoria, marca ?? '', quantidade, estoqueMinimo ?? 0, precoCompra, precoVenda, localizacao ?? '', req.params.id]
+    'UPDATE pecas SET nome=?, categoria=?, marca=?, quantidade=?, estoque_minimo=?, preco_compra=?, preco_venda=?, localizacao=? WHERE id=?',
+    [nome, categoria, marca ?? '', quantidade, estoqueMinimo ?? 0, precoCompra, precoVenda, localizacao ?? '', req.params.id]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Peça não encontrada.');
   const [rows] = await pool.execute('SELECT * FROM pecas WHERE id = ?', [req.params.id]);

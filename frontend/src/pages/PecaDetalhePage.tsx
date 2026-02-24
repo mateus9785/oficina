@@ -46,7 +46,7 @@ export function PecaDetalhePage() {
 
       <PageHeader
         title={peca.nome}
-        description={`${peca.codigo} - ${peca.marca}`}
+        description={peca.marca}
         actions={
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setEditOpen(true)}>

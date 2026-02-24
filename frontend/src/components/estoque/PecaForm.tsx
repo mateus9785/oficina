@@ -16,10 +16,10 @@ interface PecaFormProps {
 const categoriaOptions = Object.entries(CATEGORIA_PECA_LABELS).map(([value, label]) => ({ value, label }));
 
 export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
-  const [codigo, setCodigo] = useState('');
   const [nome, setNome] = useState('');
   const [categoria, setCategoria] = useState<CategoriaPeca>('motor');
   const [marca, setMarca] = useState('');
+  const [valorTotalPago, setValorTotalPago] = useState('');
   const [quantidade, setQuantidade] = useState('');
   const [estoqueMinimo, setEstoqueMinimo] = useState('');
   const [precoCompra, setPrecoCompra] = useState('');
@@ -28,7 +28,6 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
 
   useEffect(() => {
     if (peca) {
-      setCodigo(peca.codigo);
       setNome(peca.nome);
       setCategoria(peca.categoria);
       setMarca(peca.marca);
@@ -38,16 +37,26 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
       setPrecoVenda(String(peca.precoVenda));
       setLocalizacao(peca.localizacao);
     } else {
-      setCodigo(''); setNome(''); setCategoria('motor'); setMarca('');
-      setQuantidade(''); setEstoqueMinimo(''); setPrecoCompra('');
-      setPrecoVenda(''); setLocalizacao('');
+      setNome(''); setCategoria('motor'); setMarca('');
+      setValorTotalPago(''); setQuantidade(''); setEstoqueMinimo('');
+      setPrecoCompra(''); setPrecoVenda(''); setLocalizacao('');
     }
   }, [peca, isOpen]);
+
+  useEffect(() => {
+    const total = parseFloat(valorTotalPago);
+    const qty = parseFloat(quantidade);
+    if (total > 0 && qty > 0) {
+      const compra = total / qty;
+      setPrecoCompra(compra.toFixed(2));
+      setPrecoVenda((compra * 2).toFixed(2));
+    }
+  }, [valorTotalPago, quantidade]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      codigo, nome, categoria, marca,
+      nome, categoria, marca,
       quantidade: Number(quantidade),
       estoqueMinimo: Number(estoqueMinimo),
       precoCompra: Number(precoCompra),
@@ -60,13 +69,11 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={peca ? 'Editar Peça' : 'Nova Peça'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Código" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
-          <Select label="Categoria" value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaPeca)} options={categoriaOptions} />
-        </div>
+        <Select label="Categoria" value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaPeca)} options={categoriaOptions} />
         <Input label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
         <Input label="Marca" value={marca} onChange={(e) => setMarca(e.target.value)} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Input label="Valor Total Pago (R$)" type="number" step="0.01" value={valorTotalPago} onChange={(e) => setValorTotalPago(e.target.value)} placeholder="Ex: 150,00" />
           <Input label="Quantidade" type="number" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} required />
           <Input label="Estoque Mínimo" type="number" value={estoqueMinimo} onChange={(e) => setEstoqueMinimo(e.target.value)} />
         </div>

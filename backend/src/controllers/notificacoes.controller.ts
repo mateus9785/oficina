@@ -83,7 +83,7 @@ export async function getNotificacoes(_req: Request, res: Response): Promise<voi
   }));
 
   const [estoqueBaixoRows] = await pool.execute(
-    `SELECT id, codigo, nome, marca, quantidade, estoque_minimo
+    `SELECT id, nome, marca, quantidade, estoque_minimo
      FROM pecas
      WHERE estoque_minimo > 0 AND quantidade <= estoque_minimo
      ORDER BY (quantidade / estoque_minimo) ASC, nome ASC`
@@ -91,7 +91,6 @@ export async function getNotificacoes(_req: Request, res: Response): Promise<voi
 
   const estoqueBaixo = (estoqueBaixoRows as any[]).map((p) => ({
     id: p.id,
-    codigo: p.codigo,
     nome: p.nome,
     marca: p.marca,
     quantidade: p.quantidade as number,

@@ -9,7 +9,6 @@ const router = Router();
 router.use(requireAuth);
 
 const bodyRules = [
-  body('codigo').optional().trim(),
   body('nome').trim().notEmpty(),
   body('categoria').isIn(['motor','freio','suspensao','eletrica','filtro','oleo','transmissao','carroceria','acessorio','outros']),
   body('marca').optional().trim(),

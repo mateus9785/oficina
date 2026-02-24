@@ -13,7 +13,7 @@ export async function listar(req: Request, res: Response): Promise<void> {
     'SELECT COUNT(*) as total FROM clientes WHERE nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ?',
     [like, like, like]
   );
-  const total = (countRows as any[])[0].total as number;
+  const total = Number((countRows as any[])[0].total);
 
   const [rows] = await pool.execute(
     'SELECT * FROM clientes WHERE nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ? ORDER BY nome LIMIT ? OFFSET ?',

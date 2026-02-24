@@ -75,7 +75,6 @@ CREATE TABLE IF NOT EXISTS veiculos (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pecas (
   id              CHAR(36)      NOT NULL,
-  codigo          VARCHAR(40)   NOT NULL,
   nome            VARCHAR(120)  NOT NULL,
   categoria       ENUM('motor','freio','suspensao','eletrica','filtro','oleo','transmissao','carroceria','acessorio','outros') NOT NULL DEFAULT 'outros',
   marca           VARCHAR(60)   NOT NULL DEFAULT '',
@@ -87,8 +86,7 @@ CREATE TABLE IF NOT EXISTS pecas (
   uso_total       INT           NOT NULL DEFAULT 0,
   criado_em       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   atualizado_em   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_peca_codigo (codigo)
+  PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------

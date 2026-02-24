@@ -27,7 +27,7 @@ export async function listar(req: Request, res: Response): Promise<void> {
     'SELECT COUNT(*) as total FROM veiculos WHERE placa LIKE ? OR marca LIKE ? OR modelo LIKE ?',
     [like, like, like]
   );
-  const total = (countRows as any[])[0].total as number;
+  const total = Number((countRows as any[])[0].total);
 
   const [rows] = await pool.execute(
     'SELECT * FROM veiculos WHERE placa LIKE ? OR marca LIKE ? OR modelo LIKE ? ORDER BY modelo LIMIT ? OFFSET ?',

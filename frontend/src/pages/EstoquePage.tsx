@@ -34,7 +34,7 @@ export function EstoquePage() {
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase();
       result = result.filter(
-        (p) => p.nome.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q) || p.marca.toLowerCase().includes(q)
+        (p) => p.nome.toLowerCase().includes(q) || p.marca.toLowerCase().includes(q)
       );
     }
     if (categoria) {
@@ -60,7 +60,7 @@ export function EstoquePage() {
       <Card className="p-4 mb-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
-            <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nome, código ou marca..." />
+            <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nome ou marca..." />
           </div>
           <div className="sm:w-48">
             <Select value={categoria} onChange={(e) => setCategoria(e.target.value)} options={categoriaOptions} />

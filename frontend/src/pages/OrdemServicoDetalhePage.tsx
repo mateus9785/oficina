@@ -48,7 +48,7 @@ export function OrdemServicoDetalhePage() {
 
   async function handleDelete() {
     try {
-      await removerOrdem(ordem.id);
+      await removerOrdem(ordem!.id);
       toast.success('Ordem de serviço removida com sucesso!');
       navigate('/ordens');
     } catch (err) {

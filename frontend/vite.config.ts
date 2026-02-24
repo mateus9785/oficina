@@ -4,4 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  preview: {
+    allowedHosts: ['oficina.artificialstudio.com.br', 'www.oficina.artificialstudio.com.br'],
+  },
 })

@@ -15,11 +15,6 @@ export function PecaList({ pecas }: PecaListProps) {
 
   const columns = [
     {
-      key: 'codigo',
-      header: 'Código',
-      render: (p: Peca) => <span className="font-mono text-xs">{p.codigo}</span>,
-    },
-    {
       key: 'nome',
       header: 'Nome',
       render: (p: Peca) => (

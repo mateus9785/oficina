@@ -16,7 +16,7 @@ export function PecaSelector({ onSelect }: PecaSelectorProps) {
     if (!search) return pecas.slice(0, 10);
     const q = search.toLowerCase();
     return pecas.filter(
-      (p) => p.nome.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)
+      (p) => p.nome.toLowerCase().includes(q)
     ).slice(0, 10);
   }, [pecas, search]);
 
@@ -27,7 +27,7 @@ export function PecaSelector({ onSelect }: PecaSelectorProps) {
         value={search}
         onChange={(e) => { setSearch(e.target.value); setIsOpen(true); }}
         onFocus={() => setIsOpen(true)}
-        placeholder="Buscar peça por nome ou código..."
+        placeholder="Buscar peça por nome..."
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       {isOpen && filtered.length > 0 && (
@@ -41,7 +41,6 @@ export function PecaSelector({ onSelect }: PecaSelectorProps) {
             >
               <div>
                 <span className="font-medium">{p.nome}</span>
-                <span className="text-gray-500 ml-2">({p.codigo})</span>
               </div>
               <div className="text-right">
                 <span className="text-gray-900">{formatCurrency(p.precoVenda)}</span>

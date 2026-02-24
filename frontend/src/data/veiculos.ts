@@ -10,7 +10,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2019,
     placa: 'ABC1D23',
     cor: 'Prata',
-    km: 67000,
     observacoes: '',
   },
   {
@@ -22,7 +21,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2022,
     placa: 'DEF4G56',
     cor: 'Branco',
-    km: 32000,
     observacoes: 'Veículo de trabalho',
   },
   {
@@ -34,7 +32,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2021,
     placa: 'GHI7J89',
     cor: 'Vermelho',
-    km: 45000,
     observacoes: '',
   },
   {
@@ -46,7 +43,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2023,
     placa: 'JKL0M12',
     cor: 'Preto',
-    km: 28000,
     observacoes: 'Veículo da frota',
   },
   {
@@ -58,7 +54,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2020,
     placa: 'NOP3Q45',
     cor: 'Branco',
-    km: 89000,
     observacoes: 'Utilitário de entregas',
   },
   {
@@ -70,7 +65,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2022,
     placa: 'RST6U78',
     cor: 'Cinza',
-    km: 35000,
     observacoes: '',
   },
   {
@@ -82,7 +76,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2023,
     placa: 'VWX9Y01',
     cor: 'Preto',
-    km: 12000,
     observacoes: '',
   },
   {
@@ -94,7 +87,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2024,
     placa: 'ZAB2C34',
     cor: 'Azul',
-    km: 8000,
     observacoes: 'Veículo novo, em garantia',
   },
   {
@@ -106,7 +98,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2020,
     placa: 'DEF5G67',
     cor: 'Preto',
-    km: 62000,
     observacoes: '',
   },
   {
@@ -118,7 +109,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2021,
     placa: 'HIJ8K90',
     cor: 'Branco',
-    km: 120000,
     observacoes: 'Van de carga',
   },
   {
@@ -130,7 +120,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2023,
     placa: 'LMN1O23',
     cor: 'Branco',
-    km: 18000,
     observacoes: '',
   },
   {
@@ -142,7 +131,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2022,
     placa: 'PQR4S56',
     cor: 'Vermelho',
-    km: 25000,
     observacoes: 'Uso diário',
   },
   {
@@ -154,7 +142,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2024,
     placa: 'TUV7W89',
     cor: 'Azul',
-    km: 5000,
     observacoes: 'Moto de passeio',
   },
   {
@@ -166,7 +153,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2023,
     placa: 'XYZ0A12',
     cor: 'Prata',
-    km: 22000,
     observacoes: '',
   },
   {
@@ -178,7 +164,6 @@ export const veiculosSeed: Veiculo[] = [
     ano: 2021,
     placa: 'BCD3E45',
     cor: 'Branco',
-    km: 75000,
     observacoes: 'Veículo da frota',
   },
 ];

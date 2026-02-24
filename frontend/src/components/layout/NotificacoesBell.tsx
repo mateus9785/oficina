@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Cake, Clock, X, AlertTriangle, Package } from 'lucide-react';
 import { useNotificacoesStore } from '../../stores/useNotificacoesStore';
-import { formatCurrency, formatDate } from '../../lib/formatters';
-import { STATUS_OS_LABELS, STATUS_OS_COLORS } from '../../types';
-import { Badge } from '../ui/Badge';
+import { formatCurrency } from '../../lib/formatters';
 
 export function NotificacoesBell() {
   const navigate = useNavigate();
