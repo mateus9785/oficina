@@ -26,6 +26,7 @@ interface EstoqueStore {
   buscarPeca: (id: string) => Peca | undefined;
   fetchPecaById: (id: string) => Promise<void>;
   adicionarHistoricoPreco: (pecaId: string, historico: Omit<HistoricoPreco, 'data'>) => Promise<void>;
+  editarHistoricoPreco: (pecaId: string, historicoId: number, data: Omit<HistoricoPreco, 'id' | 'data'>) => Promise<void>;
   darEntrada: (pecaId: string, data: EntradaData) => Promise<void>;
   pecasAbaixoMinimo: () => Peca[];
 }
@@ -84,6 +85,13 @@ export const useEstoqueStore = create<EstoqueStore>((set, get) => ({
     }));
   },
 
+  editarHistoricoPreco: async (pecaId, historicoId, data) => {
+    const atualizada = await api.put<Peca>(`/estoque/${pecaId}/historico-preco/${historicoId}`, data);
+    set((s) => ({
+      pecas: s.pecas.map((p) => (p.id === pecaId ? atualizada : p)),
+    }));
+  },
+
   darEntrada: async (pecaId, data) => {
     const atualizada = await api.post<Peca>(`/estoque/${pecaId}/entrada`, data);
     set((s) => ({
@@ -91,5 +99,5 @@ export const useEstoqueStore = create<EstoqueStore>((set, get) => ({
     }));
   },
 
-  pecasAbaixoMinimo: () => get().pecas.filter((p) => p.quantidade <= p.estoqueMinimo),
+  pecasAbaixoMinimo: () => get().pecas.filter((p) => p.estoqueMinimo > 0 && p.quantidade <= p.estoqueMinimo),
 }));

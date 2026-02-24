@@ -66,7 +66,7 @@ export function useRelatorios() {
       totalFaturado,
       ticketMedio: ordensFinalizadas.length > 0 ? totalFaturado / ordensFinalizadas.length : 0,
       totalPecas: pecas.length,
-      pecasAbaixoMinimo: pecas.filter((p) => p.quantidade <= p.estoqueMinimo).length,
+      pecasAbaixoMinimo: pecas.filter((p) => p.estoqueMinimo > 0 && p.quantidade <= p.estoqueMinimo).length,
       fluxoMensal,
       topClientes,
       topPecas,

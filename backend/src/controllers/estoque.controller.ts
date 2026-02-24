@@ -17,6 +17,7 @@ function mapPeca(r: any, historico: any[] = []) {
     localizacao: r.localizacao,
     usoTotal: r.uso_total,
     historicoPrecos: historico.map((h: any) => ({
+      id: h.id,
       data: h.data,
       preco: parseFloat(h.preco),
       fornecedor: h.fornecedor,
@@ -103,6 +104,19 @@ export async function adicionarHistoricoPreco(req: Request, res: Response): Prom
   const [rows] = await pool.execute('SELECT * FROM pecas WHERE id = ?', [req.params.id]);
   if (!(rows as any[])[0]) throw new AppError(404, 'Peça não encontrada.');
   const [hist] = await pool.execute('SELECT * FROM historico_precos WHERE peca_id = ? ORDER BY data', [req.params.id]);
+  res.json(mapPeca((rows as any[])[0], hist as any[]));
+}
+
+export async function editarHistoricoPreco(req: Request, res: Response): Promise<void> {
+  const { id, historicoId } = req.params;
+  const { preco, precoVenda, fornecedor, quantidade, valorTotal } = req.body;
+  const [result] = await pool.execute(
+    'UPDATE historico_precos SET preco=?, preco_venda=?, fornecedor=?, quantidade=?, valor_total=? WHERE id=? AND peca_id=?',
+    [preco, precoVenda, fornecedor ?? '', quantidade, valorTotal, historicoId, id]
+  );
+  if ((result as any).affectedRows === 0) throw new AppError(404, 'Histórico não encontrado.');
+  const [rows] = await pool.execute('SELECT * FROM pecas WHERE id = ?', [id]);
+  const [hist] = await pool.execute('SELECT * FROM historico_precos WHERE peca_id = ? ORDER BY data', [id]);
   res.json(mapPeca((rows as any[])[0], hist as any[]));
 }
 

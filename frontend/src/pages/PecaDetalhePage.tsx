@@ -7,21 +7,30 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { Modal } from '../components/ui/Modal';
+import { Input } from '../components/ui/Input';
 import { PecaForm } from '../components/estoque/PecaForm';
 import { useEstoqueStore } from '../stores/useEstoqueStore';
-import { CATEGORIA_PECA_LABELS } from '../types';
+import { CATEGORIA_PECA_LABELS, type HistoricoPreco } from '../types';
 import { formatCurrency, formatDate } from '../lib/formatters';
 
 export function PecaDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { buscarPeca, editarPeca, removerPeca, fetchPecaById } = useEstoqueStore();
+  const { buscarPeca, editarPeca, removerPeca, fetchPecaById, editarHistoricoPreco } = useEstoqueStore();
 
   useEffect(() => {
     fetchPecaById(id!);
   }, [id]);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editHistorico, setEditHistorico] = useState<HistoricoPreco | null>(null);
+  const [hPreco, setHPreco] = useState('');
+  const [hPrecoVenda, setHPrecoVenda] = useState('');
+  const [hFornecedor, setHFornecedor] = useState('');
+  const [hQuantidade, setHQuantidade] = useState('');
+  const [hValorTotal, setHValorTotal] = useState('');
+  const [hSaving, setHSaving] = useState(false);
 
   const peca = buscarPeca(id!);
 
@@ -34,7 +43,36 @@ export function PecaDetalhePage() {
     );
   }
 
-  const abaixoMinimo = peca.quantidade <= peca.estoqueMinimo;
+  const abaixoMinimo = peca.estoqueMinimo > 0 && peca.quantidade <= peca.estoqueMinimo;
+
+  function abrirEditHistorico(h: HistoricoPreco) {
+    setEditHistorico(h);
+    setHPreco(String(h.preco));
+    setHPrecoVenda(String(h.precoVenda));
+    setHFornecedor(h.fornecedor);
+    setHQuantidade(String(h.quantidade));
+    setHValorTotal(String(h.valorTotal));
+  }
+
+  async function salvarHistorico() {
+    if (!editHistorico) return;
+    setHSaving(true);
+    try {
+      await editarHistoricoPreco(peca.id, editHistorico.id, {
+        preco: Number(hPreco),
+        precoVenda: Number(hPrecoVenda),
+        fornecedor: hFornecedor,
+        quantidade: Number(hQuantidade),
+        valorTotal: Number(hValorTotal),
+      });
+      toast.success('Histórico atualizado!');
+      setEditHistorico(null);
+    } catch (err) {
+      toast.error((err as Error).message || 'Erro ao atualizar histórico.');
+    } finally {
+      setHSaving(false);
+    }
+  }
 
   return (
     <div>
@@ -89,7 +127,7 @@ export function PecaDetalhePage() {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Preço de Compra</span><span className="font-medium">{formatCurrency(peca.precoCompra)}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Preço de Venda</span><span className="font-medium text-green-600">{formatCurrency(peca.precoVenda)}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Margem</span><span className="font-medium">{((peca.precoVenda - peca.precoCompra) / peca.precoCompra * 100).toFixed(0)}%</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Margem</span><span className="font-medium">{peca.precoCompra > 0 ? ((peca.precoVenda - peca.precoCompra) / peca.precoCompra * 100).toFixed(0) : '0'}%</span></div>
           </div>
           <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
             <MapPin size={14} />
@@ -103,11 +141,20 @@ export function PecaDetalhePage() {
             <p className="text-gray-500 text-sm text-center py-4">Nenhum histórico</p>
           ) : (
             <div className="space-y-2">
-              {[...peca.historicoPrecos].reverse().map((h, i) => (
-                <div key={i} className="text-xs p-2 bg-gray-50 rounded">
+              {[...peca.historicoPrecos].reverse().map((h) => (
+                <div key={h.id} className="text-xs p-2 bg-gray-50 rounded">
                   <div className="flex justify-between text-gray-500 mb-0.5">
                     <span>{formatDate(h.data)}</span>
-                    <span>{h.fornecedor || '—'}</span>
+                    <div className="flex items-center gap-2">
+                      <span>{h.fornecedor || '—'}</span>
+                      <button
+                        onClick={() => abrirEditHistorico(h)}
+                        className="text-blue-500 hover:text-blue-700"
+                        title="Editar"
+                      >
+                        <Edit size={12} />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex justify-between gap-2">
                     <span className="text-gray-600">{h.quantidade} un. · total {formatCurrency(h.valorTotal)}</span>
@@ -133,6 +180,22 @@ export function PecaDetalhePage() {
         }}
         peca={peca}
       />
+
+      <Modal isOpen={!!editHistorico} onClose={() => setEditHistorico(null)} title="Editar Histórico de Compra">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Preço de Compra (R$)" type="number" step="0.01" value={hPreco} onChange={(e) => setHPreco(e.target.value)} />
+            <Input label="Preço de Venda (R$)" type="number" step="0.01" value={hPrecoVenda} onChange={(e) => setHPrecoVenda(e.target.value)} />
+            <Input label="Quantidade" type="number" value={hQuantidade} onChange={(e) => setHQuantidade(e.target.value)} />
+            <Input label="Valor Total (R$)" type="number" step="0.01" value={hValorTotal} onChange={(e) => setHValorTotal(e.target.value)} />
+          </div>
+          <Input label="Fornecedor" value={hFornecedor} onChange={(e) => setHFornecedor(e.target.value)} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setEditHistorico(null)}>Cancelar</Button>
+            <Button onClick={salvarHistorico} disabled={hSaving}>{hSaving ? 'Salvando...' : 'Salvar'}</Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmDialog
         isOpen={deleteOpen}

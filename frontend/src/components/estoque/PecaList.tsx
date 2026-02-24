@@ -36,8 +36,8 @@ export function PecaList({ pecas, onDarEntrada }: PecaListProps) {
       header: 'Qtd',
       render: (p: Peca) => (
         <div className="flex items-center gap-1">
-          <span className={p.quantidade <= p.estoqueMinimo ? 'text-red-600 font-semibold' : ''}>{p.quantidade}</span>
-          {p.quantidade <= p.estoqueMinimo && <AlertTriangle size={14} className="text-red-500" />}
+          <span className={p.estoqueMinimo > 0 && p.quantidade <= p.estoqueMinimo ? 'text-red-600 font-semibold' : ''}>{p.quantidade}</span>
+          {p.estoqueMinimo > 0 && p.quantidade <= p.estoqueMinimo && <AlertTriangle size={14} className="text-red-500" />}
         </div>
       ),
     },

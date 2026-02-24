@@ -43,6 +43,20 @@ router.post(
   validate,
   asyncHandler(ctrl.adicionarHistoricoPreco)
 );
+router.put(
+  '/:id/historico-preco/:historicoId',
+  [
+    param('id').isUUID(),
+    param('historicoId').isInt(),
+    body('preco').isFloat({ min: 0 }),
+    body('precoVenda').isFloat({ min: 0 }),
+    body('quantidade').isInt({ min: 0 }),
+    body('valorTotal').isFloat({ min: 0 }),
+    body('fornecedor').optional().trim(),
+  ],
+  validate,
+  asyncHandler(ctrl.editarHistoricoPreco)
+);
 router.post(
   '/:id/entrada',
   [

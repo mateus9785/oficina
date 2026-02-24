@@ -130,6 +130,7 @@ export const CATEGORIA_PECA_LABELS: Record<CategoriaPeca, string> = {
 };
 
 export interface HistoricoPreco {
+  id: number;
   data: string;
   preco: number;
   fornecedor: string;
