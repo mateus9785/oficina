@@ -78,7 +78,13 @@ export function PecaList({ pecas, onDarEntrada }: PecaListProps) {
       columns={columns}
       data={pecas}
       keyExtractor={(p) => p.id}
-      onRowClick={(p) => navigate(`/estoque/${p.id}`)}
+      onRowClick={(p, e) => {
+        if (e.ctrlKey || e.metaKey) {
+          window.open(`/estoque/${p.id}`, '_blank');
+        } else {
+          navigate(`/estoque/${p.id}`);
+        }
+      }}
       emptyMessage="Nenhuma peça encontrada"
     />
   );

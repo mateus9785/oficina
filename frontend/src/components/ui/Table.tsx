@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 
 interface Column<T> {
   key: string;
@@ -11,7 +11,7 @@ interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
   keyExtractor: (item: T) => string;
-  onRowClick?: (item: T) => void;
+  onRowClick?: (item: T, event: React.MouseEvent) => void;
   emptyMessage?: string;
 }
 
@@ -45,7 +45,7 @@ export function Table<T>({ columns, data, keyExtractor, onRowClick, emptyMessage
             <tr
               key={keyExtractor(item)}
               className={onRowClick ? 'hover:bg-gray-50 cursor-pointer transition-colors' : ''}
-              onClick={() => onRowClick?.(item)}
+              onClick={(e) => onRowClick?.(item, e)}
             >
               {columns.map((col) => (
                 <td key={col.key} className={`px-4 py-3 text-sm ${col.className || ''}`}>
