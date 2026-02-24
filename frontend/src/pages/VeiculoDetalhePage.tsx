@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Car, Bike, User, Clock } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Bike, User, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
@@ -72,10 +72,7 @@ export function VeiculoDetalhePage() {
         <Card className="p-6">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
-              {veiculo.tipo === 'carro' ? <Car size={28} className="text-blue-600" /> : <Bike size={28} className="text-blue-600" />}
-            </div>
-            <div>
-              <Badge>{veiculo.tipo === 'carro' ? 'Carro' : 'Moto'}</Badge>
+              <Bike size={28} className="text-blue-600" />
             </div>
           </div>
 

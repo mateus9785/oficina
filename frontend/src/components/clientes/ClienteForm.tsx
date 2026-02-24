@@ -92,60 +92,59 @@ export function ClienteForm({ isOpen, onClose, onSave, cliente }: ClienteFormPro
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={cliente ? 'Editar Cliente' : 'Novo Cliente'} size="lg">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input label="Nome completo" value={nome} onChange={(e) => setNome(e.target.value)} required />
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            label="CPF/CNPJ"
-            value={cpfCnpj}
-            onChange={(e) => { setCpfCnpj(e.target.value); setCpfError(''); }}
-            onBlur={handleCpfBlur}
-            error={cpfError}
-          />
-          <Input label="Telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} required />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Input
-            label="Data de nascimento"
-            type="date"
-            value={dataNascimento}
-            onChange={(e) => setDataNascimento(e.target.value)}
-          />
-        </div>
-
-        <div className="border-t border-gray-200 pt-4">
-          <p className="text-sm font-medium text-gray-700 mb-3">Endereço</p>
-
-          <div className="flex items-end gap-2 mb-3">
-            <div className="w-40">
-              <Input
-                label="CEP"
-                value={cep}
-                onChange={(e) => { setCep(e.target.value); setCepError(''); }}
-                onKeyDown={handleCepKeyDown}
-                error={cepError}
-                placeholder="00000-000"
-                maxLength={9}
-              />
-            </div>
-            <div className="pb-0.5">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleBuscarCep}
-                disabled={cepLoading}
-              >
-                <Search size={16} />
-                {cepLoading ? 'Buscando...' : 'Buscar CEP'}
-              </Button>
-            </div>
+    <Modal isOpen={isOpen} onClose={onClose} title={cliente ? 'Editar Cliente' : 'Novo Cliente'} size="xl">
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-2 gap-x-6">
+          {/* Coluna esquerda — dados do cliente */}
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-gray-700">Dados do cliente</p>
+            <Input label="Nome completo" value={nome} onChange={(e) => setNome(e.target.value)} required />
+            <Input
+              label="CPF/CNPJ"
+              value={cpfCnpj}
+              onChange={(e) => { setCpfCnpj(e.target.value); setCpfError(''); }}
+              onBlur={handleCpfBlur}
+              error={cpfError}
+            />
+            <Input label="Telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} required />
+            <Input label="E-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              label="Data de nascimento"
+              type="date"
+              value={dataNascimento}
+              onChange={(e) => setDataNascimento(e.target.value)}
+            />
           </div>
 
-          <div className="space-y-3">
+          {/* Coluna direita — endereço */}
+          <div className="space-y-4 border-l border-gray-200 pl-6">
+            <p className="text-sm font-medium text-gray-700">Endereço</p>
+
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <Input
+                  label="CEP"
+                  value={cep}
+                  onChange={(e) => { setCep(e.target.value); setCepError(''); }}
+                  onKeyDown={handleCepKeyDown}
+                  error={cepError}
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+              </div>
+              <div className="pb-0.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleBuscarCep}
+                  disabled={cepLoading}
+                >
+                  <Search size={16} />
+                  {cepLoading ? 'Buscando...' : 'Buscar'}
+                </Button>
+              </div>
+            </div>
+
             <Input label="Rua / Logradouro" value={rua} onChange={(e) => setRua(e.target.value)} />
             <div className="grid grid-cols-2 gap-3">
               <Input label="Número" value={numero} onChange={(e) => setNumero(e.target.value)} />
@@ -158,7 +157,7 @@ export function ClienteForm({ isOpen, onClose, onSave, cliente }: ClienteFormPro
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex justify-end gap-3 pt-6 mt-2 border-t border-gray-200">
           <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>
           <Button type="submit">Salvar</Button>
         </div>

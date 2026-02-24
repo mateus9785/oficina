@@ -13,8 +13,8 @@ router.get('/', asyncHandler(ctrl.listar));
 router.post(
   '/',
   [
-    body('clienteId').isUUID(),
-    body('veiculoId').isUUID(),
+    body('clienteId').optional({ nullable: true }).isUUID(),
+    body('veiculoId').optional({ nullable: true }).isUUID(),
     body('descricao').optional().trim(),
     body('kmEntrada').optional().isInt({ min: 0 }),
   ],
@@ -28,8 +28,8 @@ router.put(
     param('id').isUUID(),
     body('descricao').optional().trim(),
     body('kmEntrada').optional().isInt({ min: 0 }),
-    body('clienteId').optional().isUUID(),
-    body('veiculoId').optional().isUUID(),
+    body('clienteId').optional({ nullable: true }).isUUID(),
+    body('veiculoId').optional({ nullable: true }).isUUID(),
   ],
   validate,
   asyncHandler(ctrl.editar)

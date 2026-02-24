@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Veiculo, TipoVeiculo, Cliente } from '../../types';
+import type { Veiculo, Cliente } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -17,7 +17,6 @@ interface VeiculoFormProps {
 
 export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clientes }: VeiculoFormProps) {
   const [selectedClienteId, setSelectedClienteId] = useState(clienteId || '');
-  const [tipo, setTipo] = useState<TipoVeiculo>('carro');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
   const [ano, setAno] = useState('');
@@ -27,7 +26,6 @@ export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clien
 
   useEffect(() => {
     if (veiculo) {
-      setTipo(veiculo.tipo);
       setMarca(veiculo.marca);
       setModelo(veiculo.modelo);
       setAno(veiculo.ano != null ? String(veiculo.ano) : '');
@@ -36,7 +34,6 @@ export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clien
       setObservacoes(veiculo.observacoes);
     } else {
       setSelectedClienteId(clienteId || '');
-      setTipo('carro');
       setMarca('');
       setModelo('');
       setAno('');
@@ -50,7 +47,6 @@ export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clien
     e.preventDefault();
     onSave({
       clienteId: selectedClienteId,
-      tipo,
       marca,
       modelo,
       ano: ano !== '' ? Number(ano) : null,
@@ -74,15 +70,6 @@ export function VeiculoForm({ isOpen, onClose, onSave, veiculo, clienteId, clien
           required
           />
         )}
-        <Select
-          label="Tipo"
-          value={tipo}
-          onChange={(e) => setTipo(e.target.value as TipoVeiculo)}
-          options={[
-            { value: 'carro', label: 'Carro' },
-            { value: 'moto', label: 'Moto' },
-          ]}
-        />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="Marca" value={marca} onChange={(e) => setMarca(e.target.value)} />
           <Input label="Modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} />

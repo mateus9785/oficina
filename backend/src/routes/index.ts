@@ -8,6 +8,8 @@ import financeiroRoutes from './financeiro.routes';
 import usuariosRoutes from './usuarios.routes';
 import relatoriosRoutes from './relatorios.routes';
 import notificacoesRoutes from './notificacoes.routes';
+import recorrentesRoutes from './recorrentes.routes';
+import configuracoesRoutes from './configuracoes.routes';
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use('/financeiro', financeiroRoutes);
 router.use('/usuarios', usuariosRoutes);
 router.use('/relatorios', relatoriosRoutes);
 router.use('/notificacoes', notificacoesRoutes);
+router.use('/recorrentes', recorrentesRoutes);
+router.use('/configuracoes', configuracoesRoutes);
 
 export default router;

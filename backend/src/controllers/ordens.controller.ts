@@ -30,8 +30,11 @@ function mapOrdem(r: any, itens: any[] = [], checklist: any[] = []) {
   return {
     id: r.id,
     numero: r.numero,
-    clienteId: r.cliente_id,
-    veiculoId: r.veiculo_id,
+    clienteId: r.cliente_id ?? null,
+    veiculoId: r.veiculo_id ?? null,
+    nomeCliente: r.nome_cliente ?? '',
+    descricaoVeiculo: r.descricao_veiculo ?? '',
+    descontoPercentual: parseFloat(r.desconto_percentual ?? 0),
     status: r.status,
     dataAbertura: r.data_abertura,
     dataFinalizacao: r.data_finalizacao ?? undefined,
@@ -81,11 +84,18 @@ export async function listar(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { clienteId, veiculoId, descricao, kmEntrada = 0, previsaoEntrega } = req.body;
+  const {
+    clienteId, veiculoId,
+    nomeCliente = '', descricaoVeiculo = '',
+    descricao, kmEntrada = 0, previsaoEntrega,
+    descontoPercentual = 0,
+  } = req.body;
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO ordens_servico (id, cliente_id, veiculo_id, descricao, km_entrada, previsao_entrega) VALUES (?,?,?,?,?,?)',
-    [id, clienteId, veiculoId, descricao, kmEntrada, previsaoEntrega ?? null]
+    `INSERT INTO ordens_servico
+       (id, cliente_id, veiculo_id, nome_cliente, descricao_veiculo, descricao, km_entrada, previsao_entrega, desconto_percentual)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+    [id, clienteId ?? null, veiculoId ?? null, nomeCliente, descricaoVeiculo, descricao, kmEntrada, previsaoEntrega ?? null, descontoPercentual]
   );
   const ordem = await fetchOrdemCompleta(id);
   res.status(201).json(ordem);
@@ -98,14 +108,17 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { descricao, kmEntrada, clienteId, veiculoId, previsaoEntrega } = req.body;
+  const { descricao, kmEntrada, clienteId, veiculoId, previsaoEntrega, nomeCliente, descricaoVeiculo, descontoPercentual } = req.body;
   const sets: string[] = [];
   const vals: any[] = [];
   if (descricao !== undefined) { sets.push('descricao=?'); vals.push(descricao); }
   if (kmEntrada !== undefined) { sets.push('km_entrada=?'); vals.push(kmEntrada); }
-  if (clienteId !== undefined) { sets.push('cliente_id=?'); vals.push(clienteId); }
-  if (veiculoId !== undefined) { sets.push('veiculo_id=?'); vals.push(veiculoId); }
+  if (clienteId !== undefined) { sets.push('cliente_id=?'); vals.push(clienteId || null); }
+  if (veiculoId !== undefined) { sets.push('veiculo_id=?'); vals.push(veiculoId || null); }
   if (previsaoEntrega !== undefined) { sets.push('previsao_entrega=?'); vals.push(previsaoEntrega || null); }
+  if (nomeCliente !== undefined) { sets.push('nome_cliente=?'); vals.push(nomeCliente); }
+  if (descricaoVeiculo !== undefined) { sets.push('descricao_veiculo=?'); vals.push(descricaoVeiculo); }
+  if (descontoPercentual !== undefined) { sets.push('desconto_percentual=?'); vals.push(descontoPercentual); }
   if (sets.length === 0) { res.status(400).json({ error: 'Nenhum campo para atualizar.' }); return; }
   vals.push(req.params.id);
   const [result] = await pool.execute(`UPDATE ordens_servico SET ${sets.join(',')} WHERE id=?`, vals);
@@ -149,21 +162,23 @@ export async function moverStatus(req: Request, res: Response): Promise<void> {
         [req.params.id]
       );
 
-      // Calcular total dos itens
+      // Calcular total dos itens com desconto
       const [itens] = await conn.execute(
         'SELECT quantidade, valor_unitario FROM itens_os WHERE ordem_id = ?',
         [req.params.id]
       );
-      const total = (itens as any[]).reduce(
+      const subtotal = (itens as any[]).reduce(
         (sum: number, i: any) => sum + i.quantidade * parseFloat(i.valor_unitario),
         0
       );
+      const desconto = parseFloat(ordem.desconto_percentual ?? 0);
+      const total = subtotal * (1 - desconto / 100);
 
       if (total > 0) {
         const contaId = uuidv4();
         await conn.execute(
-          `INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, data_pagamento, status, ordem_servico_id, observacoes)
-           VALUES (?, 'receita', 'ordem_servico', ?, ?, NOW(), NOW(), 'pago', ?, 'Gerado automaticamente ao finalizar OS')`,
+          `INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, data_pagamento, status, ordem_servico_id)
+           VALUES (?, 'receita', 'ordem_servico', ?, ?, NOW(), NOW(), 'pago', ?)`,
           [contaId, `OS #${ordem.numero}`, total, req.params.id]
         );
       }

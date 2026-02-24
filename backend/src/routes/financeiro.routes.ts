@@ -15,7 +15,6 @@ const bodyRules = [
   body('valor').isFloat({ min: 0.01 }),
   body('dataVencimento').isISO8601(),
   body('status').optional().isIn(['pendente','pago','atrasado']),
-  body('observacoes').optional().trim(),
 ];
 
 router.get('/', asyncHandler(ctrl.listar));

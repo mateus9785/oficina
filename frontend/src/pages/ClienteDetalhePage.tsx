@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Plus, Car, Bike, Phone, Mail, MapPin, Cake } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Bike, Phone, Mail, MapPin, Cake } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
@@ -123,7 +123,7 @@ export function ClienteDetalhePage() {
                   onClick={() => navigate(`/veiculos/${v.id}`)}
                 >
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    {v.tipo === 'carro' ? <Car size={20} className="text-blue-600" /> : <Bike size={20} className="text-blue-600" />}
+                    <Bike size={20} className="text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900">{v.marca} {v.modelo}</p>

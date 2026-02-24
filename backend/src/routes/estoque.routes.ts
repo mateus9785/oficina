@@ -8,7 +8,15 @@ import { asyncHandler } from '../utils/asyncHandler';
 const router = Router();
 router.use(requireAuth);
 
-const bodyRules = [
+const criarRules = [
+  body('nome').trim().notEmpty(),
+  body('categoria').isIn(['motor','freio','suspensao','eletrica','filtro','oleo','transmissao','carroceria','acessorio','outros']),
+  body('marca').optional().trim(),
+  body('estoqueMinimo').optional().isInt({ min: 0 }),
+  body('localizacao').optional().trim(),
+];
+
+const editarRules = [
   body('nome').trim().notEmpty(),
   body('categoria').isIn(['motor','freio','suspensao','eletrica','filtro','oleo','transmissao','carroceria','acessorio','outros']),
   body('marca').optional().trim(),
@@ -20,10 +28,10 @@ const bodyRules = [
 ];
 
 router.get('/', asyncHandler(ctrl.listar));
-router.post('/', bodyRules, validate, asyncHandler(ctrl.criar));
+router.post('/', criarRules, validate, asyncHandler(ctrl.criar));
 router.get('/alertas', asyncHandler(ctrl.alertasEstoque));
 router.get('/:id', param('id').isUUID(), validate, asyncHandler(ctrl.buscar));
-router.put('/:id', [param('id').isUUID(), ...bodyRules], validate, asyncHandler(ctrl.editar));
+router.put('/:id', [param('id').isUUID(), ...editarRules], validate, asyncHandler(ctrl.editar));
 router.delete('/:id', param('id').isUUID(), validate, asyncHandler(ctrl.remover));
 router.post(
   '/:id/historico-preco',
@@ -34,6 +42,19 @@ router.post(
   ],
   validate,
   asyncHandler(ctrl.adicionarHistoricoPreco)
+);
+router.post(
+  '/:id/entrada',
+  [
+    param('id').isUUID(),
+    body('quantidade').isInt({ min: 1 }),
+    body('valorTotal').isFloat({ min: 0 }),
+    body('precoCompra').isFloat({ min: 0 }),
+    body('precoVenda').isFloat({ min: 0 }),
+    body('fornecedor').optional().trim(),
+  ],
+  validate,
+  asyncHandler(ctrl.darEntrada)
 );
 
 export default router;

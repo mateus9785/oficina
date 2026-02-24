@@ -9,18 +9,28 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { FluxoCaixaDashboard } from '../components/financeiro/FluxoCaixaDashboard';
 import { ContasList } from '../components/financeiro/ContasList';
 import { ContaForm } from '../components/financeiro/ContaForm';
+import { RecorrenteForm } from '../components/financeiro/RecorrenteForm';
+import { RecorrentesList } from '../components/financeiro/RecorrentesList';
 import { useFinanceiroStore } from '../stores/useFinanceiroStore';
-import type { Conta } from '../types';
+import { useRecorrentesStore } from '../stores/useRecorrentesStore';
+import type { Conta, DespesaRecorrente } from '../types';
 
 export function FinanceiroPage() {
   const { contas, adicionarConta, editarConta, removerConta, pagarConta, fetchContas } = useFinanceiroStore();
+  const { recorrentes, fetchRecorrentes, adicionarRecorrente, editarRecorrente, removerRecorrente, toggleAtivo } = useRecorrentesStore();
+
   const [formOpen, setFormOpen] = useState(false);
   const [contaEditando, setContaEditando] = useState<Conta | undefined>(undefined);
   const [contaRemover, setContaRemover] = useState<Conta | undefined>(undefined);
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
 
+  const [recorrenteFormOpen, setRecorrenteFormOpen] = useState(false);
+  const [recorrenteEditando, setRecorrenteEditando] = useState<DespesaRecorrente | undefined>(undefined);
+  const [recorrenteRemover, setRecorrenteRemover] = useState<DespesaRecorrente | undefined>(undefined);
+
   useEffect(() => { fetchContas(); }, []);
+  useEffect(() => { fetchRecorrentes(); }, []);
 
   const filtered = useMemo(() => {
     let result = contas;
@@ -78,6 +88,31 @@ export function FinanceiroPage() {
         />
       </Card>
 
+      <Card className="mt-6">
+        <div className="p-4 border-b flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Despesas Recorrentes</h2>
+            <p className="text-sm text-gray-500">Geradas automaticamente 10 dias antes do vencimento</p>
+          </div>
+          <Button onClick={() => setRecorrenteFormOpen(true)}>
+            <Plus size={18} /> Nova Recorrente
+          </Button>
+        </div>
+        <RecorrentesList
+          recorrentes={recorrentes}
+          onEditar={(rec) => setRecorrenteEditando(rec)}
+          onRemover={(rec) => setRecorrenteRemover(rec)}
+          onToggle={async (id) => {
+            try {
+              await toggleAtivo(id);
+            } catch (err) {
+              toast.error((err as Error).message || 'Erro ao alterar status.');
+            }
+          }}
+        />
+      </Card>
+
+      {/* Conta forms */}
       <ContaForm
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
@@ -118,6 +153,51 @@ export function FinanceiroPage() {
             toast.error((err as Error).message || 'Erro ao excluir conta.');
           } finally {
             setContaRemover(undefined);
+          }
+        }}
+      />
+
+      {/* Recorrente forms */}
+      <RecorrenteForm
+        isOpen={recorrenteFormOpen}
+        onClose={() => setRecorrenteFormOpen(false)}
+        onSave={async (data) => {
+          try {
+            await adicionarRecorrente(data);
+            toast.success('Despesa recorrente cadastrada com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao cadastrar despesa recorrente.');
+          }
+        }}
+      />
+
+      <RecorrenteForm
+        isOpen={!!recorrenteEditando}
+        recorrente={recorrenteEditando}
+        onClose={() => setRecorrenteEditando(undefined)}
+        onSave={async (data) => {
+          try {
+            await editarRecorrente(recorrenteEditando!.id, data);
+            toast.success('Despesa recorrente atualizada com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao atualizar despesa recorrente.');
+          }
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={!!recorrenteRemover}
+        onClose={() => setRecorrenteRemover(undefined)}
+        title="Excluir despesa recorrente"
+        message={`Deseja excluir "${recorrenteRemover?.descricao || 'esta despesa recorrente'}"? Esta ação não pode ser desfeita.`}
+        onConfirm={async () => {
+          try {
+            await removerRecorrente(recorrenteRemover!.id);
+            toast.success('Despesa recorrente excluída com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao excluir despesa recorrente.');
+          } finally {
+            setRecorrenteRemover(undefined);
           }
         }}
       />

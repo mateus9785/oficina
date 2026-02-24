@@ -10,7 +10,6 @@ router.use(requireAuth);
 
 const bodyRules = [
   body('clienteId').isUUID().withMessage('clienteId inválido.'),
-  body('tipo').isIn(['carro', 'moto']).withMessage('tipo deve ser carro ou moto.'),
   body('marca').optional().trim(),
   body('modelo').optional().trim(),
   body('ano').optional({ nullable: true }).isInt({ min: 1900, max: 2100 }),

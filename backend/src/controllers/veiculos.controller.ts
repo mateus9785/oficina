@@ -8,7 +8,6 @@ function mapVeiculo(r: any) {
   return {
     id: r.id,
     clienteId: r.cliente_id,
-    tipo: r.tipo,
     marca: r.marca,
     modelo: r.modelo,
     ano: r.ano,
@@ -38,11 +37,11 @@ export async function listar(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { clienteId, tipo, marca = '', modelo = '', ano = null, placa, cor = '', observacoes = '' } = req.body;
+  const { clienteId, marca = '', modelo = '', ano = null, placa, cor = '', observacoes = '' } = req.body;
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO veiculos (id, cliente_id, tipo, marca, modelo, ano, placa, cor, observacoes) VALUES (?,?,?,?,?,?,?,?,?)',
-    [id, clienteId, tipo, marca, modelo, ano, placa.toUpperCase(), cor, observacoes]
+    'INSERT INTO veiculos (id, cliente_id, marca, modelo, ano, placa, cor, observacoes) VALUES (?,?,?,?,?,?,?,?)',
+    [id, clienteId, marca, modelo, ano, placa.toUpperCase(), cor, observacoes]
   );
   const [rows] = await pool.execute('SELECT * FROM veiculos WHERE id = ?', [id]);
   res.status(201).json(mapVeiculo((rows as any[])[0]));
@@ -56,10 +55,10 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { clienteId, tipo, marca, modelo, ano, placa, cor, observacoes } = req.body;
+  const { clienteId, marca, modelo, ano, placa, cor, observacoes } = req.body;
   const [result] = await pool.execute(
-    'UPDATE veiculos SET cliente_id=?, tipo=?, marca=?, modelo=?, ano=?, placa=?, cor=?, observacoes=? WHERE id=?',
-    [clienteId, tipo, marca, modelo, ano, placa.toUpperCase(), cor ?? '', observacoes ?? '', req.params.id]
+    'UPDATE veiculos SET cliente_id=?, marca=?, modelo=?, ano=?, placa=?, cor=?, observacoes=? WHERE id=?',
+    [clienteId, marca, modelo, ano, placa.toUpperCase(), cor ?? '', observacoes ?? '', req.params.id]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Veículo não encontrado.');
   const [rows] = await pool.execute('SELECT * FROM veiculos WHERE id = ?', [req.params.id]);

@@ -13,14 +13,25 @@ interface OrdemItensTableProps {
   onAdicionarItem: (item: Omit<ItemOS, 'id'>) => void;
   onRemoverItem: (itemId: string) => void;
   readOnly?: boolean;
+  descontoPercentual?: number;
+  onDescontoChange?: (valor: number) => void;
+  descontoMaximo?: number;
 }
 
-export function OrdemItensTable({ itens, onAdicionarItem, onRemoverItem, readOnly }: OrdemItensTableProps) {
+export function OrdemItensTable({ itens, onAdicionarItem, onRemoverItem, readOnly, descontoPercentual = 0, onDescontoChange, descontoMaximo = 100 }: OrdemItensTableProps) {
   const [addMode, setAddMode] = useState<'peca' | 'servico' | null>(null);
   const [descricaoServico, setDescricaoServico] = useState('');
   const [valorServico, setValorServico] = useState('');
 
-  const total = itens.reduce((sum, item) => sum + calcularTotalItem(item), 0);
+  const subtotal = itens.reduce((sum, item) => sum + calcularTotalItem(item), 0);
+  const valorDesconto = subtotal * (descontoPercentual / 100);
+  const total = subtotal - valorDesconto;
+
+  function handleDescontoInput(value: string) {
+    if (!onDescontoChange) return;
+    const num = Math.min(Math.max(Number(value) || 0, 0), descontoMaximo);
+    onDescontoChange(num);
+  }
 
   const handleSelectPeca = (peca: Peca) => {
     onAdicionarItem({
@@ -118,12 +129,44 @@ export function OrdemItensTable({ itens, onAdicionarItem, onRemoverItem, readOnl
               ))}
             </tbody>
             <tfoot>
+              {descontoPercentual > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={readOnly ? 4 : 5} className="py-1 text-right text-sm text-gray-500">Subtotal:</td>
+                    <td className="py-1 text-right text-sm text-gray-500">{formatCurrency(subtotal)}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={readOnly ? 4 : 5} className="py-1 text-right text-sm text-red-500">Desconto ({descontoPercentual}%):</td>
+                    <td className="py-1 text-right text-sm text-red-500">- {formatCurrency(valorDesconto)}</td>
+                  </tr>
+                </>
+              )}
               <tr className="border-t-2">
                 <td colSpan={readOnly ? 4 : 5} className="py-2 text-right font-semibold">Total:</td>
                 <td className="py-2 text-right font-bold text-green-600">{formatCurrency(total)}</td>
               </tr>
             </tfoot>
           </table>
+        </div>
+      )}
+
+      {!readOnly && onDescontoChange && itens.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-end gap-3">
+          <span className="text-sm text-gray-600 shrink-0">
+            Desconto <span className="text-gray-400">(máx. {descontoMaximo}%)</span>
+          </span>
+          <div className="flex items-center gap-1.5 w-28">
+            <Input
+              type="number"
+              min="0"
+              max={descontoMaximo}
+              step="0.5"
+              value={descontoPercentual === 0 ? '' : String(descontoPercentual)}
+              onChange={(e) => handleDescontoInput(e.target.value)}
+              placeholder="0"
+            />
+            <span className="text-sm text-gray-500 shrink-0">%</span>
+          </div>
         </div>
       )}
     </div>

@@ -30,6 +30,7 @@ export function useRelatorios() {
     // Top clientes por faturamento
     const clienteFaturamento: Record<string, number> = {};
     ordensFinalizadas.forEach((o) => {
+      if (!o.clienteId) return;
       clienteFaturamento[o.clienteId] = (clienteFaturamento[o.clienteId] || 0) + calcularTotalOS(o);
     });
     const topClientes = Object.entries(clienteFaturamento)
@@ -43,7 +44,10 @@ export function useRelatorios() {
 
     // Veículos com mais serviços
     const veiculoOS: Record<string, number> = {};
-    ordens.forEach((o) => { veiculoOS[o.veiculoId] = (veiculoOS[o.veiculoId] || 0) + 1; });
+    ordens.forEach((o) => {
+      if (!o.veiculoId) return;
+      veiculoOS[o.veiculoId] = (veiculoOS[o.veiculoId] || 0) + 1;
+    });
     const topVeiculos = Object.entries(veiculoOS)
       .map(([id, count]) => ({ veiculo: veiculos.find((v) => v.id === id), count }))
       .filter((v) => v.veiculo)

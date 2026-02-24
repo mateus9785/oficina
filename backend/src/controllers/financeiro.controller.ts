@@ -24,7 +24,6 @@ function mapConta(r: any) {
     dataPagamento: r.data_pagamento ?? undefined,
     status,
     ordemServicoId: r.ordem_servico_id ?? undefined,
-    observacoes: r.observacoes,
   };
 }
 
@@ -66,12 +65,12 @@ export async function listar(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { tipo, categoria, descricao = '', valor, dataVencimento, status = 'pendente', ordemServicoId, observacoes = '' } = req.body;
+  const { tipo, categoria, descricao = '', valor, dataVencimento, status = 'pendente', ordemServicoId } = req.body;
   const mysqlDate = new Date(dataVencimento).toISOString().slice(0, 19).replace('T', ' ');
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, status, ordem_servico_id, observacoes) VALUES (?,?,?,?,?,?,?,?,?)',
-    [id, tipo, categoria, descricao, valor, mysqlDate, status, ordemServicoId ?? null, observacoes]
+    'INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, status, ordem_servico_id) VALUES (?,?,?,?,?,?,?,?)',
+    [id, tipo, categoria, descricao, valor, mysqlDate, status, ordemServicoId ?? null]
   );
   const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [id]);
   res.status(201).json(mapConta((rows as any[])[0]));
@@ -85,11 +84,11 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { tipo, categoria, descricao = '', valor, dataVencimento, status, ordemServicoId, observacoes } = req.body;
+  const { tipo, categoria, descricao = '', valor, dataVencimento, status, ordemServicoId } = req.body;
   const mysqlDate = new Date(dataVencimento).toISOString().slice(0, 19).replace('T', ' ');
   const [result] = await pool.execute(
-    'UPDATE contas SET tipo=?, categoria=?, descricao=?, valor=?, data_vencimento=?, status=?, ordem_servico_id=?, observacoes=? WHERE id=?',
-    [tipo, categoria, descricao, valor, mysqlDate, status ?? 'pendente', ordemServicoId ?? null, observacoes ?? '', req.params.id]
+    'UPDATE contas SET tipo=?, categoria=?, descricao=?, valor=?, data_vencimento=?, status=?, ordem_servico_id=? WHERE id=?',
+    [tipo, categoria, descricao, valor, mysqlDate, status ?? 'pendente', ordemServicoId ?? null, req.params.id]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Conta não encontrada.');
   const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [req.params.id]);

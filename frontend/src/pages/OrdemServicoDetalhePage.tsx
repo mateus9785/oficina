@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Car, Bike, User, FileText, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Car, User, FileText, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -14,7 +14,7 @@ import { useClienteStore } from '../stores/useClienteStore';
 import { useVeiculoStore } from '../stores/useVeiculoStore';
 import { STATUS_OS_LABELS, STATUS_OS_COLORS } from '../types';
 import { formatDate, formatKm, formatCurrency } from '../lib/formatters';
-import { calcularTotalOS, calcularTotalPecas, calcularTotalServicos } from '../lib/calculators';
+import { calcularSubtotalOS, calcularDescontoOS, calcularTotalOS, calcularTotalPecas, calcularTotalServicos } from '../lib/calculators';
 
 export function OrdemServicoDetalhePage() {
   const { id } = useParams<{ id: string }>();
@@ -42,8 +42,9 @@ export function OrdemServicoDetalhePage() {
     );
   }
 
-  const cliente = buscarCliente(ordem.clienteId);
-  const veiculo = buscarVeiculo(ordem.veiculoId);
+  const avulso = !ordem.clienteId;
+  const cliente = ordem.clienteId ? buscarCliente(ordem.clienteId) : undefined;
+  const veiculo = ordem.veiculoId ? buscarVeiculo(ordem.veiculoId) : undefined;
   const finalizado = ordem.status === 'finalizado';
 
   async function handleDelete() {
@@ -83,7 +84,7 @@ export function OrdemServicoDetalhePage() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className={`grid grid-cols-1 gap-6 mb-6 ${avulso ? 'lg:grid-cols-2' : 'lg:grid-cols-3'}`}>
         <Card className="p-6">
           <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <FileText size={18} /> Informações
@@ -96,7 +97,9 @@ export function OrdemServicoDetalhePage() {
             {ordem.dataFinalizacao && (
               <div className="flex justify-between"><span className="text-gray-500">Data Finalização</span><span>{formatDate(ordem.dataFinalizacao)}</span></div>
             )}
-            <div className="flex justify-between"><span className="text-gray-500">KM Entrada</span><span>{formatKm(ordem.kmEntrada)}</span></div>
+            {!avulso && (
+              <div className="flex justify-between"><span className="text-gray-500">KM Entrada</span><span>{formatKm(ordem.kmEntrada)}</span></div>
+            )}
             {ordem.descricao && (
               <div className="mt-3">
                 <span className="text-gray-500 block mb-1">Descrição</span>
@@ -106,39 +109,50 @@ export function OrdemServicoDetalhePage() {
           </div>
         </Card>
 
-        <Card className="p-6">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <User size={18} /> Cliente
-          </h3>
-          {cliente && (
-            <div
-              className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-              onClick={() => navigate(`/clientes/${cliente.id}`)}
-            >
-              <p className="font-medium">{cliente.nome}</p>
-              <p className="text-sm text-gray-500">{cliente.telefone}</p>
-            </div>
-          )}
+        {!avulso && (
+          <Card className="p-6">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <User size={18} /> Cliente
+            </h3>
+            {cliente && (
+              <div
+                className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                onClick={() => navigate(`/clientes/${cliente.id}`)}
+              >
+                <p className="font-medium">{cliente.nome}</p>
+                <p className="text-sm text-gray-500">{cliente.telefone}</p>
+              </div>
+            )}
 
-          <h3 className="font-semibold text-gray-900 mb-4 mt-6 flex items-center gap-2">
-            {veiculo?.tipo === 'carro' ? <Car size={18} /> : <Bike size={18} />} Veículo
-          </h3>
-          {veiculo && (
-            <div
-              className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-              onClick={() => navigate(`/veiculos/${veiculo.id}`)}
-            >
-              <p className="font-medium">{veiculo.marca} {veiculo.modelo}</p>
-              <p className="text-sm text-gray-500">{veiculo.placa}{veiculo.ano ? ` - ${veiculo.ano}` : ''}{veiculo.cor ? ` - ${veiculo.cor}` : ''}</p>
-            </div>
-          )}
-        </Card>
+            <h3 className="font-semibold text-gray-900 mb-4 mt-6 flex items-center gap-2">
+              <Car size={18} /> Veículo
+            </h3>
+            {veiculo && (
+              <div
+                className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                onClick={() => navigate(`/veiculos/${veiculo.id}`)}
+              >
+                <p className="font-medium">{veiculo.marca} {veiculo.modelo}</p>
+                <p className="text-sm text-gray-500">{veiculo.placa}{veiculo.ano ? ` - ${veiculo.ano}` : ''}{veiculo.cor ? ` - ${veiculo.cor}` : ''}</p>
+              </div>
+            )}
+          </Card>
+        )}
 
         <Card className="p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Peças</span><span>{formatCurrency(calcularTotalPecas(ordem))}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Serviços</span><span>{formatCurrency(calcularTotalServicos(ordem))}</span></div>
+            {(ordem.descontoPercentual ?? 0) > 0 && (
+              <>
+                <div className="flex justify-between border-t pt-2"><span className="text-gray-500">Subtotal</span><span>{formatCurrency(calcularSubtotalOS(ordem))}</span></div>
+                <div className="flex justify-between text-red-600">
+                  <span>Desconto ({ordem.descontoPercentual}%)</span>
+                  <span>- {formatCurrency(calcularDescontoOS(ordem))}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between border-t pt-2"><span className="font-semibold">Total</span><span className="font-bold text-green-600 text-lg">{formatCurrency(calcularTotalOS(ordem))}</span></div>
           </div>
 

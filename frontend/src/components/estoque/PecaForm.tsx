@@ -19,7 +19,6 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
   const [nome, setNome] = useState('');
   const [categoria, setCategoria] = useState<CategoriaPeca>('motor');
   const [marca, setMarca] = useState('');
-  const [valorTotalPago, setValorTotalPago] = useState('');
   const [quantidade, setQuantidade] = useState('');
   const [estoqueMinimo, setEstoqueMinimo] = useState('');
   const [precoCompra, setPrecoCompra] = useState('');
@@ -38,31 +37,32 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
       setLocalizacao(peca.localizacao);
     } else {
       setNome(''); setCategoria('motor'); setMarca('');
-      setValorTotalPago(''); setQuantidade(''); setEstoqueMinimo('');
+      setQuantidade(''); setEstoqueMinimo('');
       setPrecoCompra(''); setPrecoVenda(''); setLocalizacao('');
     }
   }, [peca, isOpen]);
 
-  useEffect(() => {
-    const total = parseFloat(valorTotalPago);
-    const qty = parseFloat(quantidade);
-    if (total > 0 && qty > 0) {
-      const compra = total / qty;
-      setPrecoCompra(compra.toFixed(2));
-      setPrecoVenda((compra * 2).toFixed(2));
-    }
-  }, [valorTotalPago, quantidade]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      nome, categoria, marca,
-      quantidade: Number(quantidade),
-      estoqueMinimo: Number(estoqueMinimo),
-      precoCompra: Number(precoCompra),
-      precoVenda: Number(precoVenda),
-      localizacao,
-    });
+    if (peca) {
+      onSave({
+        nome, categoria, marca,
+        quantidade: Number(quantidade),
+        estoqueMinimo: Number(estoqueMinimo),
+        precoCompra: Number(precoCompra),
+        precoVenda: Number(precoVenda),
+        localizacao,
+      });
+    } else {
+      onSave({
+        nome, categoria, marca,
+        quantidade: 0,
+        estoqueMinimo: Number(estoqueMinimo),
+        precoCompra: 0,
+        precoVenda: 0,
+        localizacao,
+      });
+    }
     onClose();
   };
 
@@ -72,16 +72,24 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
         <Select label="Categoria" value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaPeca)} options={categoriaOptions} />
         <Input label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
         <Input label="Marca" value={marca} onChange={(e) => setMarca(e.target.value)} />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Input label="Valor Total Pago (R$)" type="number" step="0.01" value={valorTotalPago} onChange={(e) => setValorTotalPago(e.target.value)} placeholder="Ex: 150,00" />
-          <Input label="Quantidade" type="number" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} required />
-          <Input label="Estoque Mínimo" type="number" value={estoqueMinimo} onChange={(e) => setEstoqueMinimo(e.target.value)} />
-        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="Preço de Compra (R$)" type="number" step="0.01" value={precoCompra} onChange={(e) => setPrecoCompra(e.target.value)} required />
-          <Input label="Preço de Venda (R$)" type="number" step="0.01" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} required />
+          <Input label="Estoque Mínimo" type="number" value={estoqueMinimo} onChange={(e) => setEstoqueMinimo(e.target.value)} />
+          <Input label="Localização" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} placeholder="Ex: A1-01" />
         </div>
-        <Input label="Localização" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} placeholder="Ex: A1-01" />
+
+        {peca && (
+          <>
+            <div className="border-t pt-4">
+              <p className="text-sm text-gray-500 mb-3">Correção manual de estoque e preços</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Input label="Quantidade" type="number" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} required />
+                <Input label="Preço de Compra (R$)" type="number" step="0.01" value={precoCompra} onChange={(e) => setPrecoCompra(e.target.value)} required />
+                <Input label="Preço de Venda (R$)" type="number" step="0.01" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} required />
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>
           <Button type="submit">Salvar</Button>

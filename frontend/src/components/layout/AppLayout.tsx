@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { Menu, KeyRound, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, KeyRound, LogOut, ChevronDown, Settings } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { NotificacoesBell } from './NotificacoesBell';
 import { MudarSenhaModal } from '../auth/MudarSenhaModal';
@@ -8,11 +8,15 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 export function AppLayout() {
   const navigate = useNavigate();
-  const { logout, usuario } = useAuthStore();
+  const { logout, usuario, fetchMe } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mudarSenhaOpen, setMudarSenhaOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!usuario) fetchMe();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -75,6 +79,15 @@ export function AppLayout() {
                     <KeyRound size={16} className="text-gray-400" />
                     Mudar senha
                   </button>
+                  {usuario?.role === 'admin' && (
+                    <button
+                      onClick={() => { navigate('/configuracoes'); setUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Settings size={16} className="text-gray-400" />
+                      Configurações
+                    </button>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"

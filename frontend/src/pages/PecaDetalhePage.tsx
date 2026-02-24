@@ -15,11 +15,11 @@ import { formatCurrency, formatDate } from '../lib/formatters';
 export function PecaDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { buscarPeca, editarPeca, removerPeca, fetchPecas, pecas } = useEstoqueStore();
+  const { buscarPeca, editarPeca, removerPeca, fetchPecaById } = useEstoqueStore();
 
   useEffect(() => {
-    if (pecas.length === 0) fetchPecas();
-  }, []);
+    fetchPecaById(id!);
+  }, [id]);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -98,18 +98,21 @@ export function PecaDetalhePage() {
         </Card>
 
         <Card className="p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Histórico de Preços</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">Histórico de Compras</h3>
           {peca.historicoPrecos.length === 0 ? (
             <p className="text-gray-500 text-sm text-center py-4">Nenhum histórico</p>
           ) : (
             <div className="space-y-2">
               {[...peca.historicoPrecos].reverse().map((h, i) => (
-                <div key={i} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded">
-                  <div>
-                    <span className="text-gray-500">{formatDate(h.data)}</span>
-                    <span className="block text-xs text-gray-400">{h.fornecedor}</span>
+                <div key={i} className="text-xs p-2 bg-gray-50 rounded">
+                  <div className="flex justify-between text-gray-500 mb-0.5">
+                    <span>{formatDate(h.data)}</span>
+                    <span>{h.fornecedor || '—'}</span>
                   </div>
-                  <span className="font-medium">{formatCurrency(h.preco)}</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-gray-600">{h.quantidade} un. · total {formatCurrency(h.valorTotal)}</span>
+                    <span className="font-medium">Compra {formatCurrency(h.preco)} · Venda <span className="text-green-600">{formatCurrency(h.precoVenda)}</span></span>
+                  </div>
                 </div>
               ))}
             </div>

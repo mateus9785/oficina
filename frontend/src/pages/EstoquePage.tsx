@@ -8,10 +8,12 @@ import { SearchInput } from '../components/ui/SearchInput';
 import { Select } from '../components/ui/Select';
 import { PecaList } from '../components/estoque/PecaList';
 import { PecaForm } from '../components/estoque/PecaForm';
+import { EntradaEstoqueModal } from '../components/estoque/EntradaEstoqueModal';
 import { EstoqueAlerts } from '../components/estoque/EstoqueAlerts';
 import { useEstoqueStore } from '../stores/useEstoqueStore';
 import { useDebounce } from '../hooks/useDebounce';
 import { CATEGORIA_PECA_LABELS } from '../types';
+import type { Peca } from '../types';
 
 const categoriaOptions = [
   { value: '', label: 'Todas as categorias' },
@@ -19,10 +21,11 @@ const categoriaOptions = [
 ];
 
 export function EstoquePage() {
-  const { pecas, adicionarPeca, pecasAbaixoMinimo, fetchPecas, loading } = useEstoqueStore();
+  const { pecas, adicionarPeca, darEntrada, pecasAbaixoMinimo, fetchPecas, loading } = useEstoqueStore();
   const [search, setSearch] = useState('');
   const [categoria, setCategoria] = useState('');
   const [formOpen, setFormOpen] = useState(false);
+  const [entradaPeca, setEntradaPeca] = useState<Peca | null>(null);
   const debouncedSearch = useDebounce(search);
 
   useEffect(() => { fetchPecas(); }, []);
@@ -72,7 +75,7 @@ export function EstoquePage() {
         <Card className="p-8 text-center text-gray-400">Carregando...</Card>
       ) : (
         <Card>
-          <PecaList pecas={filtered} />
+          <PecaList pecas={filtered} onDarEntrada={(p) => setEntradaPeca(p)} />
         </Card>
       )}
 
@@ -85,6 +88,20 @@ export function EstoquePage() {
             toast.success('Peça cadastrada com sucesso!');
           } catch (err) {
             toast.error((err as Error).message || 'Erro ao cadastrar peça.');
+          }
+        }}
+      />
+
+      <EntradaEstoqueModal
+        peca={entradaPeca}
+        onClose={() => setEntradaPeca(null)}
+        onSave={async (data) => {
+          try {
+            await darEntrada(entradaPeca!.id, data);
+            toast.success('Entrada registrada com sucesso!');
+          } catch (err) {
+            toast.error((err as Error).message || 'Erro ao registrar entrada.');
+            throw err;
           }
         }}
       />

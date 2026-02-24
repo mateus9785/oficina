@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Car, Bike } from 'lucide-react';
+import { Plus, Bike } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
@@ -71,7 +71,7 @@ export function VeiculosPage() {
               onClick={() => navigate(`/veiculos/${v.id}`)}
             >
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                  {v.tipo === 'carro' ? <Car size={20} className="text-blue-600" /> : <Bike size={20} className="text-blue-600" />}
+                  <Bike size={20} className="text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-gray-900">
@@ -85,7 +85,6 @@ export function VeiculosPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Badge>{formatPlaca(v.placa)}</Badge>
-                  <Badge className="bg-blue-50 text-blue-700 border-blue-200">{v.tipo === 'carro' ? 'Carro' : 'Moto'}</Badge>
                 </div>
             </Card>
           ))}

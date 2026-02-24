@@ -7,6 +7,14 @@ interface PaginatedPecas {
   meta: { total: number; page: number; limit: number; pages: number };
 }
 
+export interface EntradaData {
+  quantidade: number;
+  valorTotal: number;
+  precoCompra: number;
+  precoVenda: number;
+  fornecedor?: string;
+}
+
 interface EstoqueStore {
   pecas: Peca[];
   loading: boolean;
@@ -16,7 +24,9 @@ interface EstoqueStore {
   editarPeca: (id: string, data: Partial<Peca>) => Promise<void>;
   removerPeca: (id: string) => Promise<void>;
   buscarPeca: (id: string) => Peca | undefined;
+  fetchPecaById: (id: string) => Promise<void>;
   adicionarHistoricoPreco: (pecaId: string, historico: Omit<HistoricoPreco, 'data'>) => Promise<void>;
+  darEntrada: (pecaId: string, data: EntradaData) => Promise<void>;
   pecasAbaixoMinimo: () => Peca[];
 }
 
@@ -55,8 +65,27 @@ export const useEstoqueStore = create<EstoqueStore>((set, get) => ({
 
   buscarPeca: (id) => get().pecas.find((p) => p.id === id),
 
+  fetchPecaById: async (id) => {
+    const peca = await api.get<Peca>(`/estoque/${id}`);
+    set((s) => {
+      const existe = s.pecas.find((p) => p.id === id);
+      return {
+        pecas: existe
+          ? s.pecas.map((p) => (p.id === id ? peca : p))
+          : [...s.pecas, peca],
+      };
+    });
+  },
+
   adicionarHistoricoPreco: async (pecaId, historico) => {
     const atualizada = await api.post<Peca>(`/estoque/${pecaId}/historico-preco`, historico);
+    set((s) => ({
+      pecas: s.pecas.map((p) => (p.id === pecaId ? atualizada : p)),
+    }));
+  },
+
+  darEntrada: async (pecaId, data) => {
+    const atualizada = await api.post<Peca>(`/estoque/${pecaId}/entrada`, data);
     set((s) => ({
       pecas: s.pecas.map((p) => (p.id === pecaId ? atualizada : p)),
     }));

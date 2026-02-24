@@ -4,7 +4,6 @@ import { CATEGORIA_CONTA_LABELS } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
 
 interface ContaFormProps {
@@ -23,7 +22,6 @@ export function ContaForm({ isOpen, onClose, onSave, conta }: ContaFormProps) {
   const [valor, setValor] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');
   const [status, setStatus] = useState<StatusConta>('pendente');
-  const [observacoes, setObservacoes] = useState('');
 
   useEffect(() => {
     if (conta) {
@@ -33,10 +31,9 @@ export function ContaForm({ isOpen, onClose, onSave, conta }: ContaFormProps) {
       setValor(String(conta.valor));
       setDataVencimento(conta.dataVencimento.split('T')[0]);
       setStatus(conta.status);
-      setObservacoes(conta.observacoes);
     } else {
       setTipo('receita'); setCategoria('ordem_servico'); setDescricao('');
-      setValor(''); setDataVencimento(''); setStatus('pendente'); setObservacoes('');
+      setValor(''); setDataVencimento(''); setStatus('pendente');
     }
   }, [conta, isOpen]);
 
@@ -47,7 +44,6 @@ export function ContaForm({ isOpen, onClose, onSave, conta }: ContaFormProps) {
       valor: Number(valor),
       dataVencimento: `${dataVencimento}T00:00:00Z`,
       status,
-      observacoes,
     });
     onClose();
   };
@@ -65,7 +61,6 @@ export function ContaForm({ isOpen, onClose, onSave, conta }: ContaFormProps) {
           <Input label="Data Vencimento" type="date" value={dataVencimento} onChange={(e) => setDataVencimento(e.target.value)} required />
           <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as StatusConta)} options={[{ value: 'pendente', label: 'Pendente' }, { value: 'pago', label: 'Pago' }]} />
         </div>
-        <Textarea label="Observações" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} />
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>
           <Button type="submit">Salvar</Button>

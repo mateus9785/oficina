@@ -16,12 +16,9 @@ export interface Cliente {
 }
 
 // === Veículo ===
-export type TipoVeiculo = 'carro' | 'moto';
-
 export interface Veiculo {
   id: string;
   clienteId: string;
-  tipo: TipoVeiculo;
   marca: string;
   modelo: string;
   ano: number | null;
@@ -80,8 +77,11 @@ export interface ChecklistDano {
 export interface OrdemServico {
   id: string;
   numero: number;
-  clienteId: string;
-  veiculoId: string;
+  clienteId: string | null;
+  veiculoId: string | null;
+  nomeCliente: string;
+  descricaoVeiculo: string;
+  descontoPercentual: number;
   status: StatusOS;
   dataAbertura: string;
   dataFinalizacao?: string;
@@ -133,6 +133,9 @@ export interface HistoricoPreco {
   data: string;
   preco: number;
   fornecedor: string;
+  quantidade: number;
+  valorTotal: number;
+  precoVenda: number;
 }
 
 export interface Peca {
@@ -187,5 +190,34 @@ export interface Conta {
   dataPagamento?: string;
   status: StatusConta;
   ordemServicoId?: string;
+}
+
+// === Despesas Recorrentes ===
+export type CategoriaRecorrente =
+  | 'aluguel'
+  | 'salario'
+  | 'energia'
+  | 'agua'
+  | 'internet'
+  | 'manutencao'
+  | 'outros';
+
+export const CATEGORIA_RECORRENTE_LABELS: Record<CategoriaRecorrente, string> = {
+  aluguel: 'Aluguel',
+  salario: 'Salário',
+  energia: 'Energia',
+  agua: 'Água',
+  internet: 'Internet',
+  manutencao: 'Manutenção',
+  outros: 'Outros',
+};
+
+export interface DespesaRecorrente {
+  id: string;
+  categoria: CategoriaRecorrente;
+  descricao: string;
+  valor: number;
+  diaVencimento: number;
+  ativo: boolean;
   observacoes: string;
 }

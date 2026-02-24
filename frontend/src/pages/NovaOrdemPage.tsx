@@ -12,6 +12,7 @@ import { OrdemItensTable } from '../components/ordens/OrdemItensTable';
 import { useClienteStore } from '../stores/useClienteStore';
 import { useVeiculoStore } from '../stores/useVeiculoStore';
 import { useOrdemServicoStore } from '../stores/useOrdemServicoStore';
+import { useConfiguracoes } from '../stores/useConfiguracoes';
 import { api } from '../lib/api';
 import type { ItemOS, AnexoOS } from '../types';
 
@@ -23,21 +24,27 @@ export function NovaOrdemPage() {
   const navigate = useNavigate();
   const { clientes, fetchClientes } = useClienteStore();
   const { veiculos, fetchVeiculos } = useVeiculoStore();
-  const { adicionarOrdem, fetchOrdens } = useOrdemServicoStore();
+  const { adicionarOrdem, moverOrdem, fetchOrdens } = useOrdemServicoStore();
+  const { config, fetchConfiguracoes } = useConfiguracoes();
 
+  const [avulso, setAvulso] = useState(false);
   const [clienteId, setClienteId] = useState('');
   const [veiculoId, setVeiculoId] = useState('');
   const [descricao, setDescricao] = useState('');
   const [kmEntrada, setKmEntrada] = useState('');
   const [previsaoEntrega, setPrevisaoEntrega] = useState('');
+  const [descontoPercentual, setDescontoPercentual] = useState('0');
   const [itens, setItens] = useState<LocalItem[]>([]);
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [salvando, setSalvando] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const descontoMaximo = Number(config.desconto_maximo ?? 100);
+
   useEffect(() => {
     if (clientes.length === 0) fetchClientes();
     if (veiculos.length === 0) fetchVeiculos();
+    fetchConfiguracoes();
   }, []);
 
   const veiculosDoCliente = clienteId
@@ -69,21 +76,35 @@ export function NovaOrdemPage() {
   }
 
   async function handleCriar() {
-    if (!clienteId) { toast.error('Selecione um cliente.'); return; }
-    if (!veiculoId) { toast.error('Selecione um veículo.'); return; }
-    if (!kmEntrada) { toast.error('Informe o KM de entrada.'); return; }
+    if (!avulso) {
+      if (!clienteId) { toast.error('Selecione um cliente.'); return; }
+      if (!veiculoId) { toast.error('Selecione um veículo.'); return; }
+      if (!kmEntrada) { toast.error('Informe o KM de entrada.'); return; }
+    }
+
+    const desconto = Math.min(Number(descontoPercentual) || 0, descontoMaximo);
 
     setSalvando(true);
     try {
-      const ordem = await adicionarOrdem({
-        clienteId,
-        veiculoId,
+      const payload: any = {
         descricao: descricao.trim() || '',
-        kmEntrada: kmEntrada ? Number(kmEntrada) : 0,
-        previsaoEntrega: previsaoEntrega || undefined,
         status: 'aguardando_aprovacao',
         dataAbertura: new Date().toISOString(),
-      });
+        descontoPercentual: desconto,
+      };
+
+      if (avulso) {
+        payload.clienteId = null;
+        payload.veiculoId = null;
+        payload.kmEntrada = 0;
+      } else {
+        payload.clienteId = clienteId;
+        payload.veiculoId = veiculoId;
+        payload.kmEntrada = Number(kmEntrada);
+        payload.previsaoEntrega = previsaoEntrega || undefined;
+      }
+
+      const ordem = await adicionarOrdem(payload);
 
       for (const item of itens) {
         await api.post(`/ordens/${ordem.id}/itens`, {
@@ -101,6 +122,10 @@ export function NovaOrdemPage() {
         await api.postForm<AnexoOS[]>(`/ordens/${ordem.id}/anexos`, formData);
       }
 
+      if (avulso) {
+        await moverOrdem(ordem.id, 'finalizado');
+      }
+
       await fetchOrdens();
       toast.success('Ordem de serviço criada com sucesso!');
       navigate(`/ordens/${ordem.id}`);
@@ -110,7 +135,6 @@ export function NovaOrdemPage() {
     }
   }
 
-  // Adaptar itens locais para o formato que OrdemItensTable espera
   const itensParaTabela: ItemOS[] = itens.map((i) => ({
     id: i._localId,
     tipo: i.tipo,
@@ -150,41 +174,57 @@ export function NovaOrdemPage() {
         <Card className="p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Informações</h3>
           <div className="space-y-4">
-            <Select
-              label="Cliente *"
-              value={clienteId}
-              onChange={(e) => handleClienteChange(e.target.value)}
-              placeholder="Selecione um cliente"
-              options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
-            />
-            <Select
-              label="Veículo *"
-              value={veiculoId}
-              onChange={(e) => setVeiculoId(e.target.value)}
-              placeholder={clienteId ? 'Selecione um veículo' : 'Selecione o cliente primeiro'}
-              disabled={!clienteId || veiculosDoCliente.length === 0}
-              options={veiculosDoCliente.map((v) => ({
-                value: v.id,
-                label: `${v.marca} ${v.modelo} — ${v.placa}`,
-              }))}
-            />
-            {clienteId && veiculosDoCliente.length === 0 && (
-              <p className="text-xs text-amber-600">Este cliente não tem veículos cadastrados.</p>
+            {/* Toggle sem cliente/veículo */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div
+                onClick={() => { setAvulso((v) => !v); setClienteId(''); setVeiculoId(''); }}
+                className={`relative w-10 h-5 rounded-full transition-colors ${avulso ? 'bg-blue-600' : 'bg-gray-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${avulso ? 'translate-x-5' : ''}`} />
+              </div>
+              <span className="text-sm text-gray-700">Sem cliente/veículo cadastrado</span>
+            </label>
+
+            {!avulso && (
+              <>
+                <Select
+                  label="Cliente *"
+                  value={clienteId}
+                  onChange={(e) => handleClienteChange(e.target.value)}
+                  placeholder="Selecione um cliente"
+                  options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
+                />
+                <Select
+                  label="Veículo *"
+                  value={veiculoId}
+                  onChange={(e) => setVeiculoId(e.target.value)}
+                  placeholder={clienteId ? 'Selecione um veículo' : 'Selecione o cliente primeiro'}
+                  disabled={!clienteId || veiculosDoCliente.length === 0}
+                  options={veiculosDoCliente.map((v) => ({
+                    value: v.id,
+                    label: `${v.marca} ${v.modelo} — ${v.placa}`,
+                  }))}
+                />
+                {clienteId && veiculosDoCliente.length === 0 && (
+                  <p className="text-xs text-amber-600">Este cliente não tem veículos cadastrados.</p>
+                )}
+                <Input
+                  label="KM de Entrada *"
+                  type="number"
+                  min="0"
+                  value={kmEntrada}
+                  onChange={(e) => setKmEntrada(e.target.value)}
+                  placeholder="0"
+                />
+                <Input
+                  label="Previsão de Entrega"
+                  type="date"
+                  value={previsaoEntrega}
+                  onChange={(e) => setPrevisaoEntrega(e.target.value)}
+                />
+              </>
             )}
-            <Input
-              label="KM de Entrada *"
-              type="number"
-              min="0"
-              value={kmEntrada}
-              onChange={(e) => setKmEntrada(e.target.value)}
-              placeholder="0"
-            />
-            <Input
-              label="Previsão de Entrega"
-              type="date"
-              value={previsaoEntrega}
-              onChange={(e) => setPrevisaoEntrega(e.target.value)}
-            />
+
             <Textarea
               label="Descrição"
               value={descricao}
@@ -200,6 +240,9 @@ export function NovaOrdemPage() {
             itens={itensParaTabela}
             onAdicionarItem={handleAdicionarItem}
             onRemoverItem={handleRemoverItem}
+            descontoPercentual={Number(descontoPercentual)}
+            onDescontoChange={(v) => setDescontoPercentual(String(v))}
+            descontoMaximo={descontoMaximo}
           />
         </Card>
       </div>

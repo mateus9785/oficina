@@ -16,6 +16,7 @@ import { FinanceiroPage } from './pages/FinanceiroPage';
 import { RelatoriosPage } from './pages/RelatoriosPage';
 import { NovaOrdemPage } from './pages/NovaOrdemPage';
 import { EditarOrdemPage } from './pages/EditarOrdemPage';
+import { ConfiguracoesPage } from './pages/ConfiguracoesPage';
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/estoque/:id" element={<PecaDetalhePage />} />
           <Route path="/financeiro" element={<FinanceiroPage />} />
           <Route path="/relatorios" element={<RelatoriosPage />} />
+          <Route path="/configuracoes" element={<ConfiguracoesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

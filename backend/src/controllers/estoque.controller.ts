@@ -20,6 +20,9 @@ function mapPeca(r: any, historico: any[] = []) {
       data: h.data,
       preco: parseFloat(h.preco),
       fornecedor: h.fornecedor,
+      quantidade: h.quantidade,
+      valorTotal: parseFloat(h.valor_total),
+      precoVenda: parseFloat(h.preco_venda),
     })),
   };
 }
@@ -44,19 +47,14 @@ export async function listar(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const { nome, categoria, marca = '', quantidade, estoqueMinimo = 0, precoCompra, precoVenda, localizacao = '' } = req.body;
+  const { nome, categoria, marca = '', estoqueMinimo = 0, localizacao = '' } = req.body;
   const id = uuidv4();
   await pool.execute(
     'INSERT INTO pecas (id, nome, categoria, marca, quantidade, estoque_minimo, preco_compra, preco_venda, localizacao) VALUES (?,?,?,?,?,?,?,?,?)',
-    [id, nome, categoria, marca, quantidade, estoqueMinimo, precoCompra, precoVenda, localizacao]
-  );
-  await pool.execute(
-    'INSERT INTO historico_precos (peca_id, preco, fornecedor) VALUES (?, ?, ?)',
-    [id, precoCompra, 'Cadastro inicial']
+    [id, nome, categoria, marca, 0, estoqueMinimo, 0, 0, localizacao]
   );
   const [rows] = await pool.execute('SELECT * FROM pecas WHERE id = ?', [id]);
-  const [hist] = await pool.execute('SELECT * FROM historico_precos WHERE peca_id = ? ORDER BY data', [id]);
-  res.status(201).json(mapPeca((rows as any[])[0], hist as any[]));
+  res.status(201).json(mapPeca((rows as any[])[0], []));
 }
 
 export async function buscar(req: Request, res: Response): Promise<void> {
@@ -106,4 +104,49 @@ export async function adicionarHistoricoPreco(req: Request, res: Response): Prom
   if (!(rows as any[])[0]) throw new AppError(404, 'Peça não encontrada.');
   const [hist] = await pool.execute('SELECT * FROM historico_precos WHERE peca_id = ? ORDER BY data', [req.params.id]);
   res.json(mapPeca((rows as any[])[0], hist as any[]));
+}
+
+export async function darEntrada(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { quantidade, valorTotal, precoCompra, precoVenda, fornecedor = '' } = req.body;
+
+  if (!quantidade || quantidade <= 0) throw new AppError(400, 'Quantidade deve ser maior que zero.');
+  if (valorTotal < 0) throw new AppError(400, 'Valor total não pode ser negativo.');
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [pecaRows] = await conn.execute('SELECT nome FROM pecas WHERE id = ?', [id]);
+    const nomePeca = (pecaRows as any[])[0]?.nome;
+    if (!nomePeca) throw new AppError(404, 'Peça não encontrada.');
+
+    await conn.execute(
+      'UPDATE pecas SET quantidade = quantidade + ?, preco_compra = ?, preco_venda = ?, atualizado_em = NOW() WHERE id = ?',
+      [quantidade, precoCompra, precoVenda, id]
+    );
+
+    await conn.execute(
+      'INSERT INTO historico_precos (peca_id, preco, fornecedor, quantidade, valor_total, preco_venda) VALUES (?,?,?,?,?,?)',
+      [id, precoCompra, fornecedor, quantidade, valorTotal, precoVenda]
+    );
+
+    const despesaId = uuidv4();
+    await conn.execute(
+      `INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, status, data_pagamento)
+       VALUES (?, 'despesa', 'compra_peca', ?, ?, NOW(), 'pago', NOW())`,
+      [despesaId, `Compra de peça: ${nomePeca} (${quantidade} un.)`, valorTotal]
+    );
+
+    await conn.commit();
+
+    const [rows] = await pool.execute('SELECT * FROM pecas WHERE id = ?', [id]);
+    const [hist] = await pool.execute('SELECT * FROM historico_precos WHERE peca_id = ? ORDER BY data', [id]);
+    res.json(mapPeca((rows as any[])[0], hist as any[]));
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
 }

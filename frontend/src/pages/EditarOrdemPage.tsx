@@ -13,6 +13,7 @@ import { AnexosSection } from '../components/ordens/AnexosSection';
 import { useOrdemServicoStore } from '../stores/useOrdemServicoStore';
 import { useClienteStore } from '../stores/useClienteStore';
 import { useVeiculoStore } from '../stores/useVeiculoStore';
+import { useConfiguracoes } from '../stores/useConfiguracoes';
 
 export function EditarOrdemPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,15 +21,18 @@ export function EditarOrdemPage() {
   const { buscarOrdem, editarOrdem, adicionarItem, removerItem, fetchOrdens, ordens } = useOrdemServicoStore();
   const { fetchClientes, clientes } = useClienteStore();
   const { fetchVeiculos, veiculos } = useVeiculoStore();
+  const { config, fetchConfiguracoes } = useConfiguracoes();
 
   useEffect(() => {
     if (ordens.length === 0) fetchOrdens();
     if (clientes.length === 0) fetchClientes();
     if (veiculos.length === 0) fetchVeiculos();
+    fetchConfiguracoes();
   }, []);
 
   const ordem = buscarOrdem(id!);
 
+  const [avulso, setAvulso] = useState(ordem ? !ordem.clienteId : false);
   const [clienteId, setClienteId] = useState(ordem?.clienteId ?? '');
   const [veiculoId, setVeiculoId] = useState(ordem?.veiculoId ?? '');
   const [kmEntrada, setKmEntrada] = useState(String(ordem?.kmEntrada ?? ''));
@@ -36,15 +40,20 @@ export function EditarOrdemPage() {
   const [previsaoEntrega, setPrevisaoEntrega] = useState(
     ordem?.previsaoEntrega ? ordem.previsaoEntrega.slice(0, 10) : ''
   );
+  const [descontoPercentual, setDescontoPercentual] = useState(String(ordem?.descontoPercentual ?? 0));
   const [salvando, setSalvando] = useState(false);
+
+  const descontoMaximo = Number(config.desconto_maximo ?? 100);
 
   useEffect(() => {
     if (ordem) {
-      setClienteId(ordem.clienteId);
-      setVeiculoId(ordem.veiculoId);
+      setAvulso(!ordem.clienteId);
+      setClienteId(ordem.clienteId ?? '');
+      setVeiculoId(ordem.veiculoId ?? '');
       setKmEntrada(String(ordem.kmEntrada));
       setDescricao(ordem.descricao);
       setPrevisaoEntrega(ordem.previsaoEntrega ? ordem.previsaoEntrega.slice(0, 10) : '');
+      setDescontoPercentual(String(ordem.descontoPercentual ?? 0));
     }
   }, [ordem?.id]);
 
@@ -65,18 +74,34 @@ export function EditarOrdemPage() {
   }
 
   async function handleSalvar() {
-    if (!clienteId) { toast.error('Selecione um cliente.'); return; }
-    if (!veiculoId) { toast.error('Selecione um veículo.'); return; }
-    if (!kmEntrada) { toast.error('Informe o KM de entrada.'); return; }
+    if (!avulso) {
+      if (!clienteId) { toast.error('Selecione um cliente.'); return; }
+      if (!veiculoId) { toast.error('Selecione um veículo.'); return; }
+      if (!kmEntrada) { toast.error('Informe o KM de entrada.'); return; }
+    }
+
+    const desconto = Math.min(Number(descontoPercentual) || 0, descontoMaximo);
+
     setSalvando(true);
     try {
-      await editarOrdem(ordem!.id, {
-        clienteId,
-        veiculoId,
+      const payload: any = {
         descricao,
-        kmEntrada: Number(kmEntrada),
-        previsaoEntrega: previsaoEntrega || undefined,
-      });
+        descontoPercentual: desconto,
+      };
+
+      if (avulso) {
+        payload.clienteId = null;
+        payload.veiculoId = null;
+        payload.kmEntrada = 0;
+        payload.previsaoEntrega = null;
+      } else {
+        payload.clienteId = clienteId;
+        payload.veiculoId = veiculoId;
+        payload.kmEntrada = Number(kmEntrada);
+        payload.previsaoEntrega = previsaoEntrega || undefined;
+      }
+
+      await editarOrdem(ordem!.id, payload);
       toast.success('Ordem de serviço atualizada com sucesso!');
       navigate(`/ordens/${ordem!.id}`);
     } catch (err) {
@@ -117,40 +142,56 @@ export function EditarOrdemPage() {
             <FileText size={18} /> Informações
           </h3>
           <div className="space-y-4">
-            <Select
-              label="Cliente *"
-              value={clienteId}
-              onChange={(e) => handleClienteChange(e.target.value)}
-              placeholder="Selecione um cliente"
-              options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
-            />
-            <Select
-              label="Veículo *"
-              value={veiculoId}
-              onChange={(e) => setVeiculoId(e.target.value)}
-              placeholder={clienteId ? 'Selecione um veículo' : 'Selecione o cliente primeiro'}
-              disabled={!clienteId || veiculosDoCliente.length === 0}
-              options={veiculosDoCliente.map((v) => ({
-                value: v.id,
-                label: `${v.marca} ${v.modelo} — ${v.placa}`,
-              }))}
-            />
-            {clienteId && veiculosDoCliente.length === 0 && (
-              <p className="text-xs text-amber-600">Este cliente não tem veículos cadastrados.</p>
+            {/* Toggle sem cliente/veículo */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div
+                onClick={() => { setAvulso((v) => !v); setClienteId(''); setVeiculoId(''); }}
+                className={`relative w-10 h-5 rounded-full transition-colors ${avulso ? 'bg-blue-600' : 'bg-gray-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${avulso ? 'translate-x-5' : ''}`} />
+              </div>
+              <span className="text-sm text-gray-700">Sem cliente/veículo cadastrado</span>
+            </label>
+
+            {!avulso && (
+              <>
+                <Select
+                  label="Cliente *"
+                  value={clienteId}
+                  onChange={(e) => handleClienteChange(e.target.value)}
+                  placeholder="Selecione um cliente"
+                  options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
+                />
+                <Select
+                  label="Veículo *"
+                  value={veiculoId}
+                  onChange={(e) => setVeiculoId(e.target.value)}
+                  placeholder={clienteId ? 'Selecione um veículo' : 'Selecione o cliente primeiro'}
+                  disabled={!clienteId || veiculosDoCliente.length === 0}
+                  options={veiculosDoCliente.map((v) => ({
+                    value: v.id,
+                    label: `${v.marca} ${v.modelo} — ${v.placa}`,
+                  }))}
+                />
+                {clienteId && veiculosDoCliente.length === 0 && (
+                  <p className="text-xs text-amber-600">Este cliente não tem veículos cadastrados.</p>
+                )}
+                <Input
+                  label="KM de Entrada *"
+                  type="number"
+                  min="0"
+                  value={kmEntrada}
+                  onChange={(e) => setKmEntrada(e.target.value)}
+                />
+                <Input
+                  label="Previsão de Entrega"
+                  type="date"
+                  value={previsaoEntrega}
+                  onChange={(e) => setPrevisaoEntrega(e.target.value)}
+                />
+              </>
             )}
-            <Input
-              label="KM de Entrada *"
-              type="number"
-              min="0"
-              value={kmEntrada}
-              onChange={(e) => setKmEntrada(e.target.value)}
-            />
-            <Input
-              label="Previsão de Entrega"
-              type="date"
-              value={previsaoEntrega}
-              onChange={(e) => setPrevisaoEntrega(e.target.value)}
-            />
+
             <Textarea
               label="Descrição"
               value={descricao}
@@ -166,6 +207,9 @@ export function EditarOrdemPage() {
             itens={ordem.itens}
             onAdicionarItem={(item) => adicionarItem(ordem.id, item)}
             onRemoverItem={(itemId) => removerItem(ordem.id, itemId)}
+            descontoPercentual={Number(descontoPercentual)}
+            onDescontoChange={(v) => setDescontoPercentual(String(v))}
+            descontoMaximo={descontoMaximo}
           />
         </Card>
       </div>
