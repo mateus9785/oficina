@@ -55,7 +55,7 @@ export function PecaDetalhePage() {
   }
 
   async function salvarHistorico() {
-    if (!editHistorico) return;
+    if (!editHistorico || !peca) return;
     setHSaving(true);
     try {
       await editarHistoricoPreco(peca.id, editHistorico.id, {
