@@ -128,8 +128,8 @@ export function DashboardPage() {
         ) : (
           <div className="space-y-3">
             {ordensRecentes.map((os) => {
-              const cliente = buscarCliente(os.clienteId);
-              const veiculo = buscarVeiculo(os.veiculoId);
+              const cliente = os.clienteId ? buscarCliente(os.clienteId) : null;
+              const veiculo = os.veiculoId ? buscarVeiculo(os.veiculoId) : null;
               return (
                 <div
                   key={os.id}
