@@ -36,6 +36,7 @@ function mapOrdem(r: any, itens: any[] = [], checklist: any[] = []) {
     descricaoVeiculo: r.descricao_veiculo ?? '',
     descontoPercentual: parseFloat(r.desconto_percentual ?? 0),
     status: r.status,
+    arquivado: !!r.arquivado,
     dataAbertura: r.data_abertura,
     dataFinalizacao: r.data_finalizacao ?? undefined,
     previsaoEntrega: r.previsao_entrega ?? undefined,
@@ -63,7 +64,8 @@ export async function listar(req: Request, res: Response): Promise<void> {
   const status = (req.query.status as string) || '';
   const clienteId = (req.query.clienteId as string) || '';
 
-  let where = 'WHERE 1=1';
+  const somenteArquivadas = req.query.arquivado === '1';
+  let where = somenteArquivadas ? 'WHERE arquivado = 1' : 'WHERE arquivado = 0';
   const params: any[] = [];
   if (status) { where += ' AND status = ?'; params.push(status); }
   if (clienteId) { where += ' AND cliente_id = ?'; params.push(clienteId); }
@@ -269,6 +271,24 @@ export async function removerItem(req: Request, res: Response): Promise<void> {
     conn.release();
   }
 
+  res.json(await fetchOrdemCompleta(req.params.id));
+}
+
+export async function arquivar(req: Request, res: Response): Promise<void> {
+  const [rows] = await pool.execute('SELECT status FROM ordens_servico WHERE id = ?', [req.params.id]);
+  const ordem = (rows as any[])[0];
+  if (!ordem) throw new AppError(404, 'Ordem não encontrada.');
+  if (ordem.status !== 'finalizado') throw new AppError(400, 'Apenas ordens finalizadas podem ser arquivadas.');
+  await pool.execute('UPDATE ordens_servico SET arquivado = 1 WHERE id = ?', [req.params.id]);
+  res.status(204).send();
+}
+
+export async function desarquivar(req: Request, res: Response): Promise<void> {
+  const [result] = await pool.execute(
+    'UPDATE ordens_servico SET arquivado = 0 WHERE id = ? AND arquivado = 1',
+    [req.params.id]
+  );
+  if ((result as any).affectedRows === 0) throw new AppError(404, 'Ordem não encontrada ou não está arquivada.');
   res.json(await fetchOrdemCompleta(req.params.id));
 }
 

@@ -51,6 +51,9 @@ router.patch(
   asyncHandler(ctrl.moverStatus)
 );
 
+router.patch('/:id/arquivar', param('id').isUUID(), validate, asyncHandler(ctrl.arquivar));
+router.patch('/:id/desarquivar', param('id').isUUID(), validate, asyncHandler(ctrl.desarquivar));
+
 // Itens
 router.post(
   '/:id/itens',

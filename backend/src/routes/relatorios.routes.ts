@@ -8,5 +8,6 @@ router.use(requireAuth);
 
 router.get('/dashboard', asyncHandler(ctrl.dashboard));
 router.get('/fluxo-mensal', asyncHandler(ctrl.fluxoMensal));
+router.get('/diario', asyncHandler(ctrl.diario));
 
 export default router;

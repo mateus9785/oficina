@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Bike, Clock } from 'lucide-react';
+import { Archive, Bike, Clock } from 'lucide-react';
 import type { OrdemServico } from '../../types';
 import { useClienteStore } from '../../stores/useClienteStore';
 import { useVeiculoStore } from '../../stores/useVeiculoStore';
@@ -10,9 +10,10 @@ import { formatCurrency } from '../../lib/formatters';
 interface KanbanCardProps {
   ordem: OrdemServico;
   onClick: () => void;
+  onArquivar?: () => void;
 }
 
-export function KanbanCard({ ordem, onClick }: KanbanCardProps) {
+export function KanbanCard({ ordem, onClick, onArquivar }: KanbanCardProps) {
   const { buscarCliente } = useClienteStore();
   const { buscarVeiculo } = useVeiculoStore();
   const cliente = ordem.clienteId ? buscarCliente(ordem.clienteId) : undefined;
@@ -40,10 +41,21 @@ export function KanbanCard({ ordem, onClick }: KanbanCardProps) {
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-bold text-blue-600">#{ordem.numero}</span>
-        <span className="text-xs text-gray-500 flex items-center gap-1">
-          <Clock size={12} />
-          {new Date(ordem.dataAbertura).toLocaleDateString('pt-BR')}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 flex items-center gap-1">
+            <Clock size={12} />
+            {new Date(ordem.dataAbertura).toLocaleDateString('pt-BR')}
+          </span>
+          {ordem.status === 'finalizado' && onArquivar && (
+            <button
+              title="Arquivar OS"
+              onClick={(e) => { e.stopPropagation(); onArquivar(); }}
+              className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+            >
+              <Archive size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">{ordem.descricao}</p>

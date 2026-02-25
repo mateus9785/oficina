@@ -19,7 +19,7 @@ import { calcularSubtotalOS, calcularDescontoOS, calcularTotalOS, calcularTotalP
 export function OrdemServicoDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { buscarOrdem, removerOrdem, fetchOrdens, ordens } = useOrdemServicoStore();
+  const { buscarOrdem, removerOrdem, fetchOrdens, carregarOrdem, ordens } = useOrdemServicoStore();
   const { buscarCliente, fetchClientes, clientes } = useClienteStore();
   const { buscarVeiculo, fetchVeiculos, veiculos } = useVeiculoStore();
 
@@ -30,6 +30,10 @@ export function OrdemServicoDetalhePage() {
     if (clientes.length === 0) fetchClientes();
     if (veiculos.length === 0) fetchVeiculos();
   }, []);
+
+  useEffect(() => {
+    if (id) carregarOrdem(id);
+  }, [id]);
 
   const ordem = buscarOrdem(id!);
 

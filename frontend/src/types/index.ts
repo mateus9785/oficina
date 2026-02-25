@@ -83,6 +83,7 @@ export interface OrdemServico {
   descricaoVeiculo: string;
   descontoPercentual: number;
   status: StatusOS;
+  arquivado?: boolean;
   dataAbertura: string;
   dataFinalizacao?: string;
   previsaoEntrega?: string;

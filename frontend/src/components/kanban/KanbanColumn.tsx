@@ -9,9 +9,10 @@ interface KanbanColumnProps {
   status: StatusOS;
   ordens: OrdemServico[];
   onCardClick: (ordem: OrdemServico) => void;
+  onArquivar?: (ordemId: string) => void;
 }
 
-export function KanbanColumn({ status, ordens, onCardClick }: KanbanColumnProps) {
+export function KanbanColumn({ status, ordens, onCardClick, onArquivar }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
@@ -30,7 +31,7 @@ export function KanbanColumn({ status, ordens, onCardClick }: KanbanColumnProps)
       <SortableContext items={ordens.map((o) => o.id)} strategy={verticalListSortingStrategy}>
         <div className="flex-1 min-h-0 px-3 pb-3 space-y-2 overflow-y-auto">
           {ordens.map((ordem) => (
-            <KanbanCard key={ordem.id} ordem={ordem} onClick={() => onCardClick(ordem)} />
+            <KanbanCard key={ordem.id} ordem={ordem} onClick={() => onCardClick(ordem)} onArquivar={onArquivar ? () => onArquivar(ordem.id) : undefined} />
           ))}
         </div>
       </SortableContext>

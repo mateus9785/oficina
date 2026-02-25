@@ -9,14 +9,19 @@ interface PaginatedOrdens {
 
 interface OrdemServicoStore {
   ordens: OrdemServico[];
+  ordensArquivadas: OrdemServico[];
   loading: boolean;
   error: string | null;
   fetchOrdens: (filtros?: { status?: string; clienteId?: string }) => Promise<void>;
+  fetchOrdensArquivadas: () => Promise<void>;
+  carregarOrdem: (id: string) => Promise<void>;
   adicionarOrdem: (data: Omit<OrdemServico, 'id' | 'numero' | 'itens' | 'checklistEntrada' | 'dataFinalizacao'>) => Promise<OrdemServico>;
   editarOrdem: (id: string, data: Partial<OrdemServico>) => Promise<void>;
   removerOrdem: (id: string) => Promise<void>;
   buscarOrdem: (id: string) => OrdemServico | undefined;
   moverOrdem: (id: string, novoStatus: StatusOS) => Promise<void>;
+  arquivarOrdem: (id: string) => Promise<void>;
+  desarquivarOrdem: (id: string) => Promise<void>;
   adicionarItem: (ordemId: string, item: Omit<ItemOS, 'id'>) => Promise<void>;
   editarItem: (ordemId: string, itemId: string, data: Partial<ItemOS>) => Promise<void>;
   removerItem: (ordemId: string, itemId: string) => Promise<void>;
@@ -27,6 +32,7 @@ interface OrdemServicoStore {
 
 export const useOrdemServicoStore = create<OrdemServicoStore>((set, get) => ({
   ordens: [],
+  ordensArquivadas: [],
   loading: false,
   error: null,
 
@@ -40,6 +46,23 @@ export const useOrdemServicoStore = create<OrdemServicoStore>((set, get) => ({
       set({ ordens: res.data, loading: false });
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
+    }
+  },
+
+  fetchOrdensArquivadas: async () => {
+    const res = await api.get<PaginatedOrdens>('/ordens?arquivado=1&limit=500');
+    set({ ordensArquivadas: res.data });
+  },
+
+  carregarOrdem: async (id: string) => {
+    const existente =
+      get().ordens.find((o) => o.id === id) ?? get().ordensArquivadas.find((o) => o.id === id);
+    if (existente) return;
+    const ordem = await api.get<OrdemServico>(`/ordens/${id}`);
+    if (ordem.arquivado) {
+      set((s) => ({ ordensArquivadas: [...s.ordensArquivadas.filter((o) => o.id !== id), ordem] }));
+    } else {
+      set((s) => ({ ordens: [...s.ordens.filter((o) => o.id !== id), ordem] }));
     }
   },
 
@@ -61,12 +84,26 @@ export const useOrdemServicoStore = create<OrdemServicoStore>((set, get) => ({
     set((s) => ({ ordens: s.ordens.filter((o) => o.id !== id) }));
   },
 
-  buscarOrdem: (id) => get().ordens.find((o) => o.id === id),
+  buscarOrdem: (id) =>
+    get().ordens.find((o) => o.id === id) ?? get().ordensArquivadas.find((o) => o.id === id),
 
   moverOrdem: async (id, novoStatus) => {
     const atualizada = await api.patch<OrdemServico>(`/ordens/${id}/status`, { status: novoStatus });
     set((s) => ({
       ordens: s.ordens.map((o) => (o.id === id ? atualizada : o)),
+    }));
+  },
+
+  arquivarOrdem: async (id) => {
+    await api.patch(`/ordens/${id}/arquivar`, {});
+    set((s) => ({ ordens: s.ordens.filter((o) => o.id !== id) }));
+  },
+
+  desarquivarOrdem: async (id) => {
+    const atualizada = await api.patch<OrdemServico>(`/ordens/${id}/desarquivar`, {});
+    set((s) => ({
+      ordensArquivadas: s.ordensArquivadas.filter((o) => o.id !== id),
+      ordens: [...s.ordens, atualizada],
     }));
   },
 

@@ -14,9 +14,10 @@ interface KanbanBoardProps {
   ordens: OrdemServico[];
   onMover: (ordemId: string, novoStatus: StatusOS) => void;
   onCardClick: (ordem: OrdemServico) => void;
+  onArquivar?: (ordemId: string) => void;
 }
 
-export function KanbanBoard({ ordens, onMover, onCardClick }: KanbanBoardProps) {
+export function KanbanBoard({ ordens, onMover, onCardClick, onArquivar }: KanbanBoardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
@@ -56,6 +57,7 @@ export function KanbanBoard({ ordens, onMover, onCardClick }: KanbanBoardProps) 
             status={status}
             ordens={ordens.filter((o) => o.status === status)}
             onCardClick={onCardClick}
+            onArquivar={onArquivar}
           />
         ))}
       </div>
