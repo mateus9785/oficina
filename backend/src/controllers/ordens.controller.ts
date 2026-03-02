@@ -233,14 +233,42 @@ export async function adicionarItem(req: Request, res: Response): Promise<void> 
 
 export async function editarItem(req: Request, res: Response): Promise<void> {
   const { descricao, quantidade, valorUnitario } = req.body;
+
+  const [rows] = await pool.execute('SELECT * FROM itens_os WHERE id = ?', [req.params.itemId]);
+  const item = (rows as any[])[0];
+  if (!item) throw new AppError(404, 'Item não encontrado.');
+
   const sets: string[] = [];
   const vals: any[] = [];
   if (descricao !== undefined) { sets.push('descricao=?'); vals.push(descricao); }
   if (quantidade !== undefined) { sets.push('quantidade=?'); vals.push(quantidade); }
   if (valorUnitario !== undefined) { sets.push('valor_unitario=?'); vals.push(valorUnitario); }
   if (sets.length === 0) { res.status(400).json({ error: 'Nenhum campo.' }); return; }
-  vals.push(req.params.itemId);
-  await pool.execute(`UPDATE itens_os SET ${sets.join(',')} WHERE id=?`, vals);
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    vals.push(req.params.itemId);
+    await conn.execute(`UPDATE itens_os SET ${sets.join(',')} WHERE id=?`, vals);
+
+    if (item.tipo === 'peca' && item.peca_id && quantidade !== undefined) {
+      const diff = quantidade - item.quantidade;
+      if (diff !== 0) {
+        await conn.execute(
+          'UPDATE pecas SET quantidade = quantidade - ?, uso_total = uso_total + ? WHERE id = ?',
+          [diff, diff, item.peca_id]
+        );
+      }
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
   res.json(await fetchOrdemCompleta(req.params.id));
 }
 

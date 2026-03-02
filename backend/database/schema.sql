@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS pecas (
   preco_compra    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   preco_venda     DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   localizacao     VARCHAR(60)   NOT NULL DEFAULT '',
+  servico_vinculado_nome  VARCHAR(120) NULL DEFAULT NULL,
+  servico_vinculado_valor DECIMAL(10,2) NULL DEFAULT NULL,
   uso_total       INT           NOT NULL DEFAULT 0,
   criado_em       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   atualizado_em   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -246,5 +248,7 @@ CREATE TABLE IF NOT EXISTS anexos_os (
 -- ALTER TABLE historico_precos ADD COLUMN quantidade INT NOT NULL DEFAULT 0;
 -- ALTER TABLE historico_precos ADD COLUMN valor_total DECIMAL(10,2) NOT NULL DEFAULT 0.00;
 -- ALTER TABLE historico_precos ADD COLUMN preco_venda DECIMAL(10,2) NOT NULL DEFAULT 0.00;
+-- ALTER TABLE pecas ADD COLUMN servico_vinculado_nome VARCHAR(120) NULL DEFAULT NULL AFTER localizacao;
+-- ALTER TABLE pecas ADD COLUMN servico_vinculado_valor DECIMAL(10,2) NULL DEFAULT NULL AFTER servico_vinculado_nome;
 -- (handled programmatically by migrate.ts)
 

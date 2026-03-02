@@ -15,6 +15,8 @@ function mapPeca(r: any, historico: any[] = []) {
     precoCompra: parseFloat(r.preco_compra),
     precoVenda: parseFloat(r.preco_venda),
     localizacao: r.localizacao,
+    servicoVinculadoNome: r.servico_vinculado_nome ?? null,
+    servicoVinculadoValor: r.servico_vinculado_valor != null ? parseFloat(r.servico_vinculado_valor) : null,
     usoTotal: r.uso_total,
     historicoPrecos: historico.map((h: any) => ({
       id: h.id,
@@ -67,10 +69,10 @@ export async function buscar(req: Request, res: Response): Promise<void> {
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  const { nome, categoria, marca, quantidade, estoqueMinimo, precoCompra, precoVenda, localizacao } = req.body;
+  const { nome, categoria, marca, quantidade, estoqueMinimo, precoCompra, precoVenda, localizacao, servicoVinculadoNome, servicoVinculadoValor } = req.body;
   const [result] = await pool.execute(
-    'UPDATE pecas SET nome=?, categoria=?, marca=?, quantidade=?, estoque_minimo=?, preco_compra=?, preco_venda=?, localizacao=? WHERE id=?',
-    [nome, categoria, marca ?? '', quantidade, estoqueMinimo ?? 0, precoCompra, precoVenda, localizacao ?? '', req.params.id]
+    'UPDATE pecas SET nome=?, categoria=?, marca=?, quantidade=?, estoque_minimo=?, preco_compra=?, preco_venda=?, localizacao=?, servico_vinculado_nome=?, servico_vinculado_valor=? WHERE id=?',
+    [nome, categoria, marca ?? '', quantidade, estoqueMinimo ?? 0, precoCompra, precoVenda, localizacao ?? '', servicoVinculadoNome ?? null, servicoVinculadoValor ?? null, req.params.id]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Peça não encontrada.');
   const [rows] = await pool.execute('SELECT * FROM pecas WHERE id = ?', [req.params.id]);

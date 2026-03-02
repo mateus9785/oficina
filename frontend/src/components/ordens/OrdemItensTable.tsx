@@ -5,27 +5,43 @@ import { Input } from '../ui/Input';
 import { PecaSelector } from '../estoque/PecaSelector';
 import { formatCurrency } from '../../lib/formatters';
 import { calcularTotalItem } from '../../lib/calculators';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Pencil } from 'lucide-react';
 import type { Peca } from '../../types';
 
 interface OrdemItensTableProps {
   itens: ItemOS[];
   onAdicionarItem: (item: Omit<ItemOS, 'id'>) => void;
   onRemoverItem: (itemId: string) => void;
+  onEditarQuantidade?: (itemId: string, quantidade: number) => void;
   readOnly?: boolean;
   descontoPercentual?: number;
   onDescontoChange?: (valor: number) => void;
   descontoMaximo?: number;
 }
 
-export function OrdemItensTable({ itens, onAdicionarItem, onRemoverItem, readOnly, descontoPercentual = 0, onDescontoChange, descontoMaximo = 100 }: OrdemItensTableProps) {
+export function OrdemItensTable({ itens, onAdicionarItem, onRemoverItem, onEditarQuantidade, readOnly, descontoPercentual = 0, onDescontoChange, descontoMaximo = 100 }: OrdemItensTableProps) {
   const [addMode, setAddMode] = useState<'peca' | 'servico' | null>(null);
   const [descricaoServico, setDescricaoServico] = useState('');
   const [valorServico, setValorServico] = useState('');
+  const [editandoQtd, setEditandoQtd] = useState<string | null>(null);
+  const [qtdTemp, setQtdTemp] = useState('');
 
   const subtotal = itens.reduce((sum, item) => sum + calcularTotalItem(item), 0);
   const valorDesconto = subtotal * (descontoPercentual / 100);
   const total = subtotal - valorDesconto;
+
+  function iniciarEdicaoQtd(item: ItemOS) {
+    setEditandoQtd(item.id);
+    setQtdTemp(String(item.quantidade));
+  }
+
+  function confirmarEdicaoQtd(item: ItemOS) {
+    const nova = Math.max(1, Number(qtdTemp) || 1);
+    if (nova !== item.quantidade && onEditarQuantidade) {
+      onEditarQuantidade(item.id, nova);
+    }
+    setEditandoQtd(null);
+  }
 
   function handleDescontoInput(value: string) {
     if (!onDescontoChange) return;
@@ -41,6 +57,14 @@ export function OrdemItensTable({ itens, onAdicionarItem, onRemoverItem, readOnl
       quantidade: 1,
       valorUnitario: peca.precoVenda,
     });
+    if (peca.servicoVinculadoNome && peca.servicoVinculadoValor != null) {
+      onAdicionarItem({
+        tipo: 'servico',
+        descricao: peca.servicoVinculadoNome,
+        quantidade: 1,
+        valorUnitario: peca.servicoVinculadoValor,
+      });
+    }
   };
 
   const handleAddServico = () => {
@@ -115,7 +139,34 @@ export function OrdemItensTable({ itens, onAdicionarItem, onRemoverItem, readOnl
                     </span>
                   </td>
                   <td className="py-2">{item.descricao}</td>
-                  <td className="py-2 text-right">{item.quantidade}</td>
+                  <td className="py-2 text-right">
+                    {!readOnly && onEditarQuantidade && editandoQtd === item.id ? (
+                      <input
+                        type="number"
+                        min="1"
+                        value={qtdTemp}
+                        onChange={(e) => setQtdTemp(e.target.value)}
+                        onBlur={() => confirmarEdicaoQtd(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') confirmarEdicaoQtd(item);
+                          if (e.key === 'Escape') setEditandoQtd(null);
+                        }}
+                        autoFocus
+                        className="w-16 text-right border border-blue-400 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <span
+                        onClick={() => !readOnly && onEditarQuantidade && iniciarEdicaoQtd(item)}
+                        className={!readOnly && onEditarQuantidade ? 'cursor-pointer inline-flex items-center gap-1 hover:text-blue-600' : ''}
+                        title={!readOnly && onEditarQuantidade ? 'Clique para editar' : undefined}
+                      >
+                        {item.quantidade}
+                        {!readOnly && onEditarQuantidade && (
+                          <Pencil size={11} className="text-gray-400" />
+                        )}
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 text-right">{formatCurrency(item.valorUnitario)}</td>
                   <td className="py-2 text-right font-medium">{formatCurrency(calcularTotalItem(item))}</td>
                   {!readOnly && (

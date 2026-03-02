@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, TrendingUp, Package, MapPin, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, TrendingUp, Package, MapPin, AlertTriangle, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
@@ -117,6 +117,20 @@ export function PecaDetalhePage() {
             <div className="flex justify-between"><span className="text-gray-500">Quantidade</span><span className={`font-medium ${abaixoMinimo ? 'text-red-600' : ''}`}>{peca.quantidade}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Estoque Mínimo</span><span className="font-medium">{peca.estoqueMinimo}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Uso Total</span><span className="font-medium">{peca.usoTotal}</span></div>
+            {peca.servicoVinculadoNome && (
+              <div className="pt-3 mt-3 border-t">
+                <div className="flex items-center gap-1.5 text-purple-700 font-medium mb-1">
+                  <Wrench size={14} />
+                  <span className="text-xs uppercase tracking-wide">Serviço vinculado</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">{peca.servicoVinculadoNome}</span>
+                  {peca.servicoVinculadoValor != null && (
+                    <span className="font-medium text-purple-700">{formatCurrency(peca.servicoVinculadoValor)}</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 

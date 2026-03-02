@@ -207,6 +207,7 @@ export function EditarOrdemPage() {
             itens={ordem.itens}
             onAdicionarItem={(item) => adicionarItem(ordem.id, item)}
             onRemoverItem={(itemId) => removerItem(ordem.id, itemId)}
+            onEditarQuantidade={(itemId, quantidade) => editarItem(ordem.id, itemId, { quantidade })}
             descontoPercentual={Number(descontoPercentual)}
             onDescontoChange={(v) => setDescontoPercentual(String(v))}
             descontoMaximo={descontoMaximo}

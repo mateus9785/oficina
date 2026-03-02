@@ -150,6 +150,8 @@ export interface Peca {
   precoCompra: number;
   precoVenda: number;
   localizacao: string;
+  servicoVinculadoNome: string | null;
+  servicoVinculadoValor: number | null;
   usoTotal: number;
   historicoPrecos: HistoricoPreco[];
 }

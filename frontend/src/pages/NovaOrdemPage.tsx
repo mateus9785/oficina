@@ -64,6 +64,10 @@ export function NovaOrdemPage() {
     setItens((prev) => prev.filter((i) => i._localId !== localId));
   }
 
+  function handleEditarQuantidade(localId: string, quantidade: number) {
+    setItens((prev) => prev.map((i) => i._localId === localId ? { ...i, quantidade } : i));
+  }
+
   function handleArquivos(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files) return;
@@ -240,6 +244,7 @@ export function NovaOrdemPage() {
             itens={itensParaTabela}
             onAdicionarItem={handleAdicionarItem}
             onRemoverItem={handleRemoverItem}
+            onEditarQuantidade={handleEditarQuantidade}
             descontoPercentual={Number(descontoPercentual)}
             onDescontoChange={(v) => setDescontoPercentual(String(v))}
             descontoMaximo={descontoMaximo}

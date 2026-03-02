@@ -19,50 +19,43 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
   const [nome, setNome] = useState('');
   const [categoria, setCategoria] = useState<CategoriaPeca>('motor');
   const [marca, setMarca] = useState('');
-  const [quantidade, setQuantidade] = useState('');
   const [estoqueMinimo, setEstoqueMinimo] = useState('');
-  const [precoCompra, setPrecoCompra] = useState('');
-  const [precoVenda, setPrecoVenda] = useState('');
   const [localizacao, setLocalizacao] = useState('');
+  const [servicoVinculadoNome, setServicoVinculadoNome] = useState('');
+  const [servicoVinculadoValor, setServicoVinculadoValor] = useState('');
 
   useEffect(() => {
     if (peca) {
       setNome(peca.nome);
       setCategoria(peca.categoria);
       setMarca(peca.marca);
-      setQuantidade(String(peca.quantidade));
       setEstoqueMinimo(String(peca.estoqueMinimo));
-      setPrecoCompra(String(peca.precoCompra));
-      setPrecoVenda(String(peca.precoVenda));
       setLocalizacao(peca.localizacao);
+      setServicoVinculadoNome(peca.servicoVinculadoNome ?? '');
+      setServicoVinculadoValor(peca.servicoVinculadoValor != null ? String(peca.servicoVinculadoValor) : '');
     } else {
       setNome(''); setCategoria('motor'); setMarca('');
-      setQuantidade(''); setEstoqueMinimo('');
-      setPrecoCompra(''); setPrecoVenda(''); setLocalizacao('');
+      setEstoqueMinimo(''); setLocalizacao('');
+      setServicoVinculadoNome(''); setServicoVinculadoValor('');
     }
   }, [peca, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (peca) {
-      onSave({
-        nome, categoria, marca,
-        quantidade: Number(quantidade),
-        estoqueMinimo: Number(estoqueMinimo),
-        precoCompra: Number(precoCompra),
-        precoVenda: Number(precoVenda),
-        localizacao,
-      });
-    } else {
-      onSave({
-        nome, categoria, marca,
-        quantidade: 0,
-        estoqueMinimo: Number(estoqueMinimo),
-        precoCompra: 0,
-        precoVenda: 0,
-        localizacao,
-      });
-    }
+
+    const svNome = servicoVinculadoNome.trim() || null;
+    const svValor = servicoVinculadoValor.trim() ? Number(servicoVinculadoValor) : null;
+
+    onSave({
+      nome, categoria, marca,
+      quantidade: peca?.quantidade ?? 0,
+      estoqueMinimo: Number(estoqueMinimo),
+      precoCompra: peca?.precoCompra ?? 0,
+      precoVenda: peca?.precoVenda ?? 0,
+      localizacao,
+      servicoVinculadoNome: svNome,
+      servicoVinculadoValor: svValor,
+    });
     onClose();
   };
 
@@ -77,18 +70,26 @@ export function PecaForm({ isOpen, onClose, onSave, peca }: PecaFormProps) {
           <Input label="Localização" value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} placeholder="Ex: A1-01" />
         </div>
 
-        {peca && (
-          <>
-            <div className="border-t pt-4">
-              <p className="text-sm text-gray-500 mb-3">Correção manual de estoque e preços</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Input label="Quantidade" type="number" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} required />
-                <Input label="Preço de Compra (R$)" type="number" step="0.01" value={precoCompra} onChange={(e) => setPrecoCompra(e.target.value)} required />
-                <Input label="Preço de Venda (R$)" type="number" step="0.01" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} required />
-              </div>
-            </div>
-          </>
-        )}
+        <div className="border-t pt-4">
+          <p className="text-sm font-medium text-gray-700 mb-1">Serviço vinculado</p>
+          <p className="text-xs text-gray-500 mb-3">Ao adicionar esta peça a uma OS, este serviço será inserido automaticamente.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Nome do serviço"
+              value={servicoVinculadoNome}
+              onChange={(e) => setServicoVinculadoNome(e.target.value)}
+              placeholder="Ex: Troca de Óleo"
+            />
+            <Input
+              label="Valor do serviço (R$)"
+              type="number"
+              step="0.01"
+              value={servicoVinculadoValor}
+              onChange={(e) => setServicoVinculadoValor(e.target.value)}
+              placeholder="Ex: 80.00"
+            />
+          </div>
+        </div>
 
         <div className="flex justify-end gap-3 pt-4">
           <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>
