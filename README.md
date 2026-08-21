@@ -2,40 +2,41 @@
 
 ![CI](https://github.com/mateus9785/oficina/actions/workflows/ci.yml/badge.svg)
 
-A repair-shop (oficina mecânica) management system: clientes, veículos,
-ordens de serviço on a kanban board (aguardando aprovação → aguardando peça →
-em execução → pronto pra retirada → finalizado), part/stock inventory, and a
-financeiro module that turns a finalized order into a receivable
-automatically.
+Um sistema de gestão para oficina mecânica: clientes, veículos,
+ordens de serviço em um quadro kanban (aguardando aprovação → aguardando peça →
+em execução → pronto pra retirada → finalizado), controle de estoque de peças e um
+módulo financeiro que transforma uma ordem finalizada em uma conta a receber
+automaticamente.
 
-The biggest showcase repo of this portfolio pass -- the most modern stack
-(React 19 / Vite 7 / TypeScript strict on the frontend, Express / TypeScript
-strict / mysql2 on the backend) and the deepest backend refactor (real
-multi-table transactions around stock and financials).
+Construído com uma stack moderna (React 19 / Vite 7 / TypeScript strict no
+frontend, Express / TypeScript strict / mysql2 no backend), com um refactor
+de backend focado em transações reais multi-tabela envolvendo estoque e
+financeiro.
 
 ## Stack
 
 **Backend** (`backend/`)
 - Node.js + **Express 4** + **TypeScript** (`strict: true`)
-- **MySQL** via the raw **mysql2** driver, no ORM
-- **JWT** auth (access + refresh tokens), `bcryptjs`, `express-validator`,
+- **MySQL** via o driver bruto **mysql2**, sem ORM
+- Autenticação **JWT** (access + refresh tokens), `bcryptjs`, `express-validator`,
   `helmet`, `express-rate-limit`
-- **Vitest** + **Supertest** -- tests
-- **ESLint** (`typescript-eslint` recommended) + **Prettier** +
+- **Vitest** + **Supertest** para os testes
+- **ESLint** (recomendado do `typescript-eslint`) + **Prettier** +
   **Husky**/**lint-staged**/**commitlint**
 
 **Frontend** (`frontend/`)
-- **React 19** + **Vite 7** + **TypeScript** (`strict: true`, plus
+- **React 19** + **Vite 7** + **TypeScript** (`strict: true`, além de
   `noUnusedLocals`/`noUnusedParameters`/`noFallthroughCasesInSwitch`)
-- **Zustand** -- state management (no data-fetching library; a small `fetch`
-  wrapper in `src/lib/api.ts`)
-- **Tailwind CSS v4**, hand-rolled UI primitives (no component library),
-  `@dnd-kit` (kanban drag-and-drop), `recharts` (financeiro/relatórios charts)
-- **Vitest** + **React Testing Library** -- tests
+- **Zustand** para gerenciamento de estado (sem biblioteca de data-fetching; um
+  pequeno wrapper de `fetch` em `src/lib/api.ts`)
+- **Tailwind CSS v4**, primitivos de UI feitos à mão (sem biblioteca de
+  componentes), `@dnd-kit` (drag-and-drop do kanban), `recharts` (gráficos do
+  financeiro/relatórios)
+- **Vitest** + **React Testing Library** para os testes
 - **ESLint** (flat config, `typescript-eslint` + `eslint-plugin-react-hooks`)
   + **Prettier**
 
-## Architecture
+## Arquitetura
 
 ```
 repo root/
@@ -50,58 +51,61 @@ repo root/
       pages/  ->  components/  ->  stores/ (Zustand)  ->  lib/api.ts  ->  backend
 ```
 
-`backend/` and `frontend/` are two fully independent npm projects (their own
-`package.json` and lockfile each) inside one repo, not an npm/pnpm workspace
--- they share no code, dependencies, or build step, so a workspace would add
-indirection without benefit. The root `package.json` exists purely to host
-Husky/lint-staged/commitlint, so a single git hook can cover commits to
-either side; that's also why there's a third `package-lock.json` at the
-repo root, not a mistake.
+`backend/` e `frontend/` são dois projetos npm totalmente independentes (cada
+um com seu próprio `package.json` e lockfile) dentro de um único repositório,
+não um workspace npm/pnpm: eles não compartilham código, dependências ou
+etapa de build, então um workspace adicionaria indireção sem benefício. O
+`package.json` da raiz existe apenas para hospedar Husky/lint-staged/commitlint,
+de forma que um único git hook cubra commits para os dois lados; é por isso
+também que existe um terceiro `package-lock.json` na raiz do repositório, o
+que não é um engano.
 
-Only `clientes` and `ordens` (the entities with the most business-rule
-complexity -- stock deduction, receivable generation, multi-table
-transactions) go through a `repositories/` + `services/` split on the
-backend; the other 10 controllers still query the database directly. This
-was a deliberate scope decision, not an oversight -- see
-[Known limitations](#known-limitations--roadmap).
+Apenas `clientes` e `ordens` (as entidades com maior complexidade de regras de
+negócio: dedução de estoque, geração de contas a receber, transações
+multi-tabela) passam por uma separação em `repositories/` + `services/` no
+backend; os outros 10 controllers ainda consultam o banco de dados
+diretamente. Essa foi uma decisão deliberada de escopo, não um descuido (veja
+[Limitações conhecidas](#limitações-conhecidas--próximos-passos)).
 
-## Technical Decisions
+## Decisões Técnicas
 
-- **mysql2 raw driver, no ORM.** A deliberate pre-existing choice, kept as
-  is -- not revisited in this pass.
-- **`services/`+`repositories/` for clientes/ordens only.** These two
-  controllers had ~32 raw SQL queries and 4 hand-written multi-table
-  transactions between them (finalize an order → create a receivable;
-  add/edit/remove an item → adjust part stock). The other 10 controllers are
-  simpler CRUD with no comparable transaction risk -- extracting layers
-  there wouldn't demonstrate anything the first two don't already show, so
-  it's explicitly out of scope rather than half-done everywhere.
-- **Transactions always open in the service, never the repository.** A
-  repository represents one table; deciding that finalizing an order and
-  creating a receivable must be atomic is a business-rule decision, not a
-  storage detail. Repository methods that only make sense inside a
-  transaction take `conn: PoolConnection` without a `?`, so the compiler
-  refuses a call outside one.
-- **Row types generated against `schema.sql`, not guessed.** `DECIMAL`
-  columns are typed `string` and `TINYINT(1)` columns `number`, matching
-  what mysql2 actually returns (no `decimalNumbers: true` on the pool) --
-  typed as what the driver hands back, not what the column conceptually is.
-- **Vitest over Jest on the backend**, despite it being `"type": "commonjs"`.
-  Vitest needs zero transform configuration for TypeScript, and it's the
-  same runner the frontend uses -- one less tool to know to evaluate the
-  whole repo.
-- **`tsconfig.build.json`, separate from `tsconfig.json`, on the backend.**
-  `tsc`'s default `include` picks up `*.test.ts` files; without a
-  build-specific config excluding them, `npm run build` would emit test code
-  into `dist/`. The base config still includes them for IDE/type-checking.
-- **`react-scripts`-era CRA patterns avoided on purpose**: this frontend
-  wasn't migrated from anything, it started on Vite -- no legacy tooling
-  decisions to document here, unlike the other frontend repos in this
-  portfolio.
+- **Driver bruto mysql2, sem ORM.** Uma escolha deliberada pré-existente,
+  mantida como está: não foi revisitada nesta etapa.
+- **`services/` + `repositories/` apenas para clientes/ordens.** Esses dois
+  controllers tinham cerca de 32 queries SQL brutas e 4 transações
+  multi-tabela escritas à mão entre eles (finalizar uma ordem → criar uma
+  conta a receber; adicionar/editar/remover um item → ajustar o estoque de
+  peças). Os outros 10 controllers são CRUD mais simples, sem risco de
+  transação comparável: extrair camadas ali não demonstraria nada que os dois
+  primeiros já não mostrem, então isso ficou explicitamente fora de escopo em
+  vez de malfeito em todo lugar.
+- **Transações sempre abrem no service, nunca no repository.** Um repository
+  representa uma tabela; decidir que finalizar uma ordem e criar uma conta a
+  receber precisa ser atômico é uma decisão de regra de negócio, não um
+  detalhe de armazenamento. Métodos de repository que só fazem sentido dentro
+  de uma transação recebem `conn: PoolConnection` sem `?`, de forma que o
+  compilador recusa uma chamada fora de uma transação.
+- **Tipos de linha gerados a partir do `schema.sql`, não adivinhados.**
+  Colunas `DECIMAL` são tipadas como `string` e colunas `TINYINT(1)` como
+  `number`, correspondendo ao que o mysql2 de fato retorna (sem
+  `decimalNumbers: true` no pool): tipado conforme o driver devolve, não
+  conforme o significado conceitual da coluna.
+- **Vitest em vez de Jest no backend**, mesmo sendo `"type": "commonjs"`. O
+  Vitest não exige nenhuma configuração de transformação para TypeScript, e é
+  o mesmo executor usado no frontend: uma ferramenta a menos para conhecer ao
+  avaliar o repositório inteiro.
+- **`tsconfig.build.json`, separado do `tsconfig.json`, no backend.** O
+  `include` padrão do `tsc` pega os arquivos `*.test.ts`; sem uma
+  configuração específica de build excluindo-os, `npm run build` geraria
+  código de teste dentro de `dist/`. A configuração base continua os
+  incluindo para checagem de tipos/IDE.
+- **Padrões de era CRA (`react-scripts`) evitados de propósito**: este
+  frontend não foi migrado de nada, começou direto no Vite, então não há
+  decisões de ferramentas legadas para documentar aqui.
 
-## Setup
+## Configuração
 
-Requires Node 20+ and a MySQL 8 instance.
+Requer Node 20+ e uma instância MySQL 8.
 
 ```bash
 # MySQL (one-liner, no compose file in this repo)
@@ -123,39 +127,41 @@ cp .env.example .env   # VITE_API_URL, only needed if the backend isn't on :3001
 npm run dev             # http://localhost:5173
 ```
 
-## Testing
+## Testes
 
 ```bash
 cd backend && npm test    # Vitest: unit (mocked pool) + integration (real MySQL)
 cd frontend && npm test   # Vitest + React Testing Library
 ```
 
-Backend integration tests run against a real MySQL database (the same one
-from Setup works, or a disposable one) -- they `TRUNCATE` the tables they
-touch before each test, so don't point `DB_NAME` at a database with data you
-care about. CI spins up its own MySQL service container.
+Os testes de integração do backend rodam contra um banco MySQL real (o mesmo
+da seção Configuração funciona, ou um descartável); eles fazem `TRUNCATE` nas
+tabelas que tocam antes de cada teste, então não aponte `DB_NAME` para um
+banco com dados que importam. O CI sobe seu próprio container de serviço
+MySQL.
 
-## Known limitations / Roadmap
+## Limitações conhecidas / Próximos passos
 
-- The `services`/`repositories` layer covers only `clientes` and `ordens`;
-  the other 10 backend controllers (`anexos`, `auth`, `configuracoes`,
+- A camada `services`/`repositories` cobre apenas `clientes` e `ordens`; os
+  outros 10 controllers do backend (`anexos`, `auth`, `configuracoes`,
   `estoque`, `financeiro`, `notificacoes`, `recorrentes`, `relatorios`,
-  `usuarios`, `veiculos`) still query the database directly. Deliberate
-  scope decision (see [Architecture](#architecture)), candidates for the
-  same treatment if extended later.
-- `listar` on `ordens` does one query for the page of orders, then one
-  additional round-trip per order to fetch its items/checklist (N+1) --
-  inherited from the original implementation, not introduced or fixed in
-  this pass.
-- Test coverage is representative, not exhaustive: backend covers the two
-  refactored entities' repositories and routes; frontend covers the highest
-  real-bug-risk pure functions (`calculators.ts`) plus one store and one
-  component as a reference pattern, not all 8 stores or 32 components.
-- `editarItem`'s stock read happens before its transaction opens (a small,
-  pre-existing, unguarded race window) -- preserved as-is rather than
-  silently changed during the refactor; documented in the
-  `refactor/backend-services-repositories` PR.
+  `usuarios`, `veiculos`) ainda consultam o banco de dados diretamente.
+  Decisão deliberada de escopo (veja [Arquitetura](#arquitetura)), candidatos
+  ao mesmo tratamento se o projeto for estendido.
+- `listar` em `ordens` faz uma query para a página de ordens e depois uma
+  consulta adicional por ordem para buscar seus itens/checklist (N+1):
+  herdado da implementação original, não introduzido nem corrigido nesta
+  etapa.
+- A cobertura de testes é representativa, não exaustiva: o backend cobre os
+  repositories e routes das duas entidades refatoradas; o frontend cobre as
+  funções puras com maior risco real de bug (`calculators.ts`), além de uma
+  store e um componente como padrão de referência, não todas as 8 stores ou
+  os 32 componentes.
+- A leitura de estoque em `editarItem` acontece antes de sua transação abrir
+  (uma pequena janela de corrida pré-existente e sem proteção): preservada
+  como está em vez de ser silenciosamente alterada durante o refactor;
+  documentada no PR `refactor/backend-services-repositories`.
 
-## License
+## Licença
 
 [MIT](./LICENSE)
