@@ -1,5 +1,6 @@
 import { PoolConnection, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { pool } from '../config/database';
+import { ClienteRow } from '../types/database';
 
 function exec(conn?: PoolConnection) {
   return conn ? conn.execute.bind(conn) : pool.execute.bind(pool);
@@ -34,9 +35,9 @@ export async function findAll(
   filter: ClienteFilter,
   pagination: ClientePagination,
   conn?: PoolConnection
-): Promise<RowDataPacket[]> {
+): Promise<ClienteRow[]> {
   const like = `%${filter.search}%`;
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+  const [rows] = await exec(conn)<ClienteRow[]>(
     'SELECT * FROM clientes WHERE nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ? ORDER BY nome LIMIT ? OFFSET ?',
     [like, like, like, pagination.sqlLimit, pagination.sqlOffset]
   );
@@ -48,7 +49,7 @@ export async function count(
   conn?: PoolConnection
 ): Promise<number> {
   const like = `%${filter.search}%`;
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+  const [rows] = await exec(conn)<(RowDataPacket & { total: number })[]>(
     'SELECT COUNT(*) as total FROM clientes WHERE nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ?',
     [like, like, like]
   );
@@ -59,8 +60,8 @@ export async function findByCpf(
   cpf: string,
   excludeId?: string,
   conn?: PoolConnection
-): Promise<RowDataPacket | null> {
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+): Promise<(RowDataPacket & { id: string }) | null> {
+  const [rows] = await exec(conn)<(RowDataPacket & { id: string })[]>(
     'SELECT id FROM clientes WHERE cpf_cnpj = ? AND id != ?',
     [cpf, excludeId || '']
   );
@@ -70,8 +71,8 @@ export async function findByCpf(
 export async function findById(
   id: string,
   conn?: PoolConnection
-): Promise<RowDataPacket | null> {
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+): Promise<ClienteRow | null> {
+  const [rows] = await exec(conn)<ClienteRow[]>(
     'SELECT * FROM clientes WHERE id = ?',
     [id]
   );

@@ -1,4 +1,4 @@
-import { RowDataPacket, PoolConnection } from 'mysql2/promise';
+import { PoolConnection } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
@@ -8,8 +8,13 @@ import * as itemOsRepository from '../repositories/itemOsRepository';
 import * as checklistRepository from '../repositories/checklistRepository';
 import * as contaRepository from '../repositories/contaRepository';
 import * as pecaRepository from '../repositories/pecaRepository';
+import {
+  OrdemServicoRow,
+  ItemOsRow,
+  ChecklistEntradaRow,
+} from '../types/database';
 
-function mapItem(r: RowDataPacket) {
+function mapItem(r: ItemOsRow) {
   return {
     id: r.id,
     tipo: r.tipo,
@@ -20,7 +25,7 @@ function mapItem(r: RowDataPacket) {
   };
 }
 
-function mapChecklist(r: RowDataPacket) {
+function mapChecklist(r: ChecklistEntradaRow) {
   return {
     zona: r.zona,
     temDano: !!r.tem_dano,
@@ -29,9 +34,9 @@ function mapChecklist(r: RowDataPacket) {
 }
 
 function mapOrdem(
-  r: RowDataPacket,
-  itens: RowDataPacket[] = [],
-  checklist: RowDataPacket[] = []
+  r: OrdemServicoRow,
+  itens: ItemOsRow[] = [],
+  checklist: ChecklistEntradaRow[] = []
 ) {
   return {
     id: r.id,
@@ -197,7 +202,7 @@ export async function remover(id: string): Promise<void> {
 }
 
 function calcularTotalComDesconto(
-  itens: RowDataPacket[],
+  itens: ItemOsRow[],
   descontoPercentual: unknown
 ): number {
   const subtotal = itens.reduce(
