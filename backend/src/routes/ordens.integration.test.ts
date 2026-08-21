@@ -3,16 +3,17 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import { createApp } from '../app';
 import { pool } from '../config/database';
-import { resetDb } from '../test-helpers/testDb';
-import { authHeader } from '../test-helpers/testAuth';
+import { resetDb, criarUsuarioTeste } from '../test-helpers/testDb';
+import { authHeader, USUARIO_TESTE_PADRAO } from '../test-helpers/testAuth';
 
 const app = createApp();
+const USUARIO_B = '00000000-0000-0000-0000-00000000000b';
 
 async function criarPeca(quantidade: number): Promise<string> {
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO pecas (id, nome, categoria, quantidade, preco_venda) VALUES (?, ?, ?, ?, ?)',
-    [id, 'Filtro de Óleo', 'filtro', quantidade, 50]
+    'INSERT INTO pecas (id, usuario_id, nome, categoria, quantidade, preco_venda) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, USUARIO_TESTE_PADRAO, 'Filtro de Óleo', 'filtro', quantidade, 50]
   );
   return id;
 }
@@ -178,5 +179,38 @@ describe('ordens routes', () => {
       .get('/api/v1/ordens?arquivado=1')
       .set('Authorization', authHeader());
     expect(listArquivadas.body.meta.total).toBe(1);
+  });
+
+  describe('isolamento por conta', () => {
+    it('rejeita adicionar item referenciando peça de outro usuário', async () => {
+      await criarUsuarioTeste(USUARIO_B, 'b@teste.local');
+      const pecaDoA = await criarPeca(10);
+
+      const ordemDoB = await request(app)
+        .post('/api/v1/ordens')
+        .set('Authorization', authHeader({ sub: USUARIO_B }))
+        .send({ descricao: 'OS do B' });
+
+      const addItem = await request(app)
+        .post(`/api/v1/ordens/${ordemDoB.body.id}/itens`)
+        .set('Authorization', authHeader({ sub: USUARIO_B }))
+        .send({ tipo: 'peca', descricao: 'Peça do A', quantidade: 1, valorUnitario: 10, pecaId: pecaDoA });
+
+      expect(addItem.status).toBe(404);
+      expect(await estoqueDe(pecaDoA)).toEqual({ quantidade: 10, uso_total: 0 });
+    });
+
+    it('não vê ordens de outro usuário', async () => {
+      await criarUsuarioTeste(USUARIO_B, 'b@teste.local');
+      await request(app)
+        .post('/api/v1/ordens')
+        .set('Authorization', authHeader())
+        .send({ descricao: 'OS do A' });
+
+      const listarComoB = await request(app)
+        .get('/api/v1/ordens')
+        .set('Authorization', authHeader({ sub: USUARIO_B }));
+      expect(listarComoB.body.meta.total).toBe(0);
+    });
   });
 });

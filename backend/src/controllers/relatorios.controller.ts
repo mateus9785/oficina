@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { pool } from '../config/database';
 
 export async function diario(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const data = (req.query.data as string) || new Date().toISOString().slice(0, 10);
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
@@ -16,9 +17,9 @@ export async function diario(req: Request, res: Response): Promise<void> {
               p.nome, p.categoria, p.marca
        FROM historico_precos hp
        JOIN pecas p ON p.id = hp.peca_id
-       WHERE DATE(hp.data) = ?
+       WHERE p.usuario_id = ? AND DATE(hp.data) = ?
        ORDER BY hp.data DESC`,
-      [data]
+      [usuarioId, data]
     ),
 
     // Saídas de estoque (itens de peça adicionados a OS no dia)
@@ -29,9 +30,9 @@ export async function diario(req: Request, res: Response): Promise<void> {
        FROM itens_os io
        JOIN ordens_servico o ON o.id = io.ordem_id
        LEFT JOIN pecas p ON p.id = io.peca_id
-       WHERE io.tipo = 'peca' AND io.peca_id IS NOT NULL AND DATE(io.criado_em) = ?
+       WHERE o.usuario_id = ? AND io.tipo = 'peca' AND io.peca_id IS NOT NULL AND DATE(io.criado_em) = ?
        ORDER BY io.criado_em DESC`,
-      [data]
+      [usuarioId, data]
     ),
 
     // OS abertas ou finalizadas no dia
@@ -45,19 +46,19 @@ export async function diario(req: Request, res: Response): Promise<void> {
        LEFT JOIN clientes c ON c.id = o.cliente_id
        LEFT JOIN veiculos v ON v.id = o.veiculo_id
        LEFT JOIN itens_os io ON io.ordem_id = o.id
-       WHERE DATE(o.data_abertura) = ? OR DATE(o.data_finalizacao) = ?
+       WHERE o.usuario_id = ? AND (DATE(o.data_abertura) = ? OR DATE(o.data_finalizacao) = ?)
        GROUP BY o.id
        ORDER BY o.numero DESC`,
-      [data, data]
+      [usuarioId, data, data]
     ),
 
     // Movimentações financeiras do dia (venceu ou foi pago)
     pool.execute(
       `SELECT id, tipo, categoria, descricao, valor, data_vencimento, data_pagamento, status, ordem_servico_id
        FROM contas
-       WHERE DATE(data_vencimento) = ? OR DATE(data_pagamento) = ?
+       WHERE usuario_id = ? AND (DATE(data_vencimento) = ? OR DATE(data_pagamento) = ?)
        ORDER BY tipo, data_vencimento`,
-      [data, data]
+      [usuarioId, data, data]
     ),
   ]);
 
@@ -149,13 +150,14 @@ export async function diario(req: Request, res: Response): Promise<void> {
   });
 }
 
-export async function dashboard(_req: Request, res: Response): Promise<void> {
+export async function dashboard(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const [[totalClientes], [totalVeiculos], [totalPecas], [osStats], [financeiro], [alertas]] = await Promise.all([
-    pool.execute('SELECT COUNT(*) as total FROM clientes'),
-    pool.execute('SELECT COUNT(*) as total FROM veiculos'),
-    pool.execute('SELECT COUNT(*) as total FROM pecas'),
-    pool.execute(`
-      SELECT
+    pool.execute('SELECT COUNT(*) as total FROM clientes WHERE usuario_id = ?', [usuarioId]),
+    pool.execute('SELECT COUNT(*) as total FROM veiculos WHERE usuario_id = ?', [usuarioId]),
+    pool.execute('SELECT COUNT(*) as total FROM pecas WHERE usuario_id = ?', [usuarioId]),
+    pool.execute(
+      `SELECT
         COUNT(*) as total,
         SUM(status = 'aguardando_aprovacao') as aguardando_aprovacao,
         SUM(status = 'aguardando_peca') as aguardando_peca,
@@ -163,15 +165,19 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
         SUM(status = 'pronto_retirada') as pronto_retirada,
         SUM(status = 'finalizado') as finalizado
       FROM ordens_servico
-    `),
-    pool.execute(`
-      SELECT
+      WHERE usuario_id = ?`,
+      [usuarioId]
+    ),
+    pool.execute(
+      `SELECT
         COALESCE(SUM(CASE WHEN tipo='receita' AND MONTH(data_vencimento)=MONTH(NOW()) AND YEAR(data_vencimento)=YEAR(NOW()) THEN valor END), 0) as receitasMes,
         COALESCE(SUM(CASE WHEN tipo='despesa' AND MONTH(data_vencimento)=MONTH(NOW()) AND YEAR(data_vencimento)=YEAR(NOW()) THEN valor END), 0) as despesasMes,
         COALESCE(SUM(CASE WHEN status='pendente' AND data_vencimento < NOW() THEN valor END), 0) as contasAtrasadas
       FROM contas
-    `),
-    pool.execute('SELECT COUNT(*) as total FROM pecas WHERE quantidade <= estoque_minimo'),
+      WHERE usuario_id = ?`,
+      [usuarioId]
+    ),
+    pool.execute('SELECT COUNT(*) as total FROM pecas WHERE usuario_id = ? AND quantidade <= estoque_minimo', [usuarioId]),
   ]);
 
   const os = (osStats as any[])[0];
@@ -200,6 +206,7 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
 }
 
 export async function fluxoMensal(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const ano = parseInt((req.query.ano as string) || String(new Date().getFullYear()), 10);
 
   const [rows] = await pool.execute(
@@ -208,10 +215,10 @@ export async function fluxoMensal(req: Request, res: Response): Promise<void> {
       tipo,
       SUM(valor) as total
     FROM contas
-    WHERE YEAR(data_vencimento) = ?
+    WHERE usuario_id = ? AND YEAR(data_vencimento) = ?
     GROUP BY MONTH(data_vencimento), tipo
     ORDER BY mes`,
-    [ano]
+    [usuarioId, ano]
   );
 
   const meses = Array.from({ length: 12 }, (_, i) => ({

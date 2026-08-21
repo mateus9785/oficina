@@ -68,8 +68,9 @@ export async function listar(query: {
   sqlLimit: bigint;
   sqlOffset: bigint;
   search: string;
+  usuarioId: string;
 }) {
-  const filter = { search: query.search };
+  const filter = { usuarioId: query.usuarioId, search: query.search };
   const total = await clienteRepository.count(filter);
   const rows = await clienteRepository.findAll(filter, {
     sqlLimit: query.sqlLimit,
@@ -82,20 +83,21 @@ export async function listar(query: {
   });
 }
 
-export async function verificarCpf(cpf: string, excludeId?: string) {
+export async function verificarCpf(cpf: string, usuarioId: string, excludeId?: string) {
   if (!cpf.trim()) return false;
-  const found = await clienteRepository.findByCpf(cpf.trim(), excludeId || '');
+  const found = await clienteRepository.findByCpf(cpf.trim(), usuarioId, excludeId || '');
   return found !== null;
 }
 
-export async function criar(input: ClienteInput) {
+export async function criar(input: ClienteInput, usuarioId: string) {
   const cpf = input.cpfCnpj?.trim() || null;
   if (cpf) {
-    const dup = await clienteRepository.findByCpf(cpf);
+    const dup = await clienteRepository.findByCpf(cpf, usuarioId);
     if (dup) throw new AppError(409, 'CPF/CNPJ já cadastrado.');
   }
   const id = uuidv4();
   await clienteRepository.create(id, {
+    usuarioId,
     nome: input.nome,
     cpfCnpj: cpf,
     telefone: input.telefone ?? '',
@@ -108,23 +110,24 @@ export async function criar(input: ClienteInput) {
     numero: input.numero ?? '',
     complemento: input.complemento ?? '',
   });
-  const cliente = await clienteRepository.findById(id);
+  const cliente = await clienteRepository.findById(id, usuarioId);
   return mapCliente(cliente!);
 }
 
-export async function buscar(id: string) {
-  const cliente = await clienteRepository.findById(id);
+export async function buscar(id: string, usuarioId: string) {
+  const cliente = await clienteRepository.findById(id, usuarioId);
   if (!cliente) throw new AppError(404, 'Cliente não encontrado.');
   return mapCliente(cliente);
 }
 
-export async function editar(id: string, input: ClienteInput) {
+export async function editar(id: string, input: ClienteInput, usuarioId: string) {
   const cpf = input.cpfCnpj?.trim() || null;
   if (cpf) {
-    const dup = await clienteRepository.findByCpf(cpf, id);
+    const dup = await clienteRepository.findByCpf(cpf, usuarioId, id);
     if (dup) throw new AppError(409, 'CPF/CNPJ já cadastrado.');
   }
   const updated = await clienteRepository.update(id, {
+    usuarioId,
     nome: input.nome,
     cpfCnpj: cpf,
     telefone: input.telefone ?? '',
@@ -138,16 +141,18 @@ export async function editar(id: string, input: ClienteInput) {
     complemento: input.complemento ?? '',
   });
   if (!updated) throw new AppError(404, 'Cliente não encontrado.');
-  const cliente = await clienteRepository.findById(id);
+  const cliente = await clienteRepository.findById(id, usuarioId);
   return mapCliente(cliente!);
 }
 
-export async function remover(id: string) {
-  const removed = await clienteRepository.remove(id);
+export async function remover(id: string, usuarioId: string) {
+  const removed = await clienteRepository.remove(id, usuarioId);
   if (!removed) throw new AppError(404, 'Cliente não encontrado.');
 }
 
-export async function veiculosDoCliente(id: string) {
-  const rows = await veiculoRepository.findByClienteId(id);
+export async function veiculosDoCliente(id: string, usuarioId: string) {
+  const cliente = await clienteRepository.findById(id, usuarioId);
+  if (!cliente) throw new AppError(404, 'Cliente não encontrado.');
+  const rows = await veiculoRepository.findByClienteId(id, usuarioId);
   return mapVeiculos(rows);
 }

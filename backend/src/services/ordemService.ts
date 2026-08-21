@@ -8,6 +8,7 @@ import * as itemOsRepository from '../repositories/itemOsRepository';
 import * as checklistRepository from '../repositories/checklistRepository';
 import * as contaRepository from '../repositories/contaRepository';
 import * as pecaRepository from '../repositories/pecaRepository';
+import { assertClienteOwnedBy, assertVeiculoOwnedBy, assertPecaOwnedBy, assertOrdemOwnedBy } from '../utils/ownership';
 import {
   OrdemServicoRow,
   ItemOsRow,
@@ -58,8 +59,8 @@ function mapOrdem(
   };
 }
 
-export async function buscarCompleta(id: string, conn?: PoolConnection) {
-  const ordem = await ordemRepository.findById(id, conn);
+export async function buscarCompleta(id: string, usuarioId: string, conn?: PoolConnection) {
+  const ordem = await ordemRepository.findById(id, usuarioId, conn);
   if (!ordem) return null;
   const itens = await itemOsRepository.findByOrdemId(id, conn);
   const checklist = await checklistRepository.findByOrdemId(id, conn);
@@ -86,8 +87,10 @@ export async function listar(query: {
   status: string;
   clienteId: string;
   somenteArquivadas: boolean;
+  usuarioId: string;
 }) {
   const filter = {
+    usuarioId: query.usuarioId,
     status: query.status,
     clienteId: query.clienteId,
     somenteArquivadas: query.somenteArquivadas,
@@ -97,7 +100,7 @@ export async function listar(query: {
     sqlLimit: query.sqlLimit,
     sqlOffset: query.sqlOffset,
   });
-  const ordens = await Promise.all(rows.map((r) => buscarCompleta(r.id)));
+  const ordens = await Promise.all(rows.map((r) => buscarCompleta(r.id, query.usuarioId)));
   return paginatedResponse(
     ordens.filter((o): o is NonNullable<typeof o> => o !== null),
     total,
@@ -105,9 +108,12 @@ export async function listar(query: {
   );
 }
 
-export async function criar(input: OrdemInput) {
+export async function criar(input: OrdemInput, usuarioId: string) {
+  if (input.clienteId) await assertClienteOwnedBy(input.clienteId, usuarioId);
+  if (input.veiculoId) await assertVeiculoOwnedBy(input.veiculoId, usuarioId);
   const id = uuidv4();
   await ordemRepository.create(id, {
+    usuarioId,
     clienteId: input.clienteId ?? null,
     veiculoId: input.veiculoId ?? null,
     nomeCliente: input.nomeCliente ?? '',
@@ -117,19 +123,23 @@ export async function criar(input: OrdemInput) {
     previsaoEntrega: input.previsaoEntrega ?? null,
     descontoPercentual: input.descontoPercentual ?? 0,
   });
-  return buscarCompleta(id);
+  return buscarCompleta(id, usuarioId);
 }
 
-export async function buscar(id: string) {
-  const ordem = await buscarCompleta(id);
+export async function buscar(id: string, usuarioId: string) {
+  const ordem = await buscarCompleta(id, usuarioId);
   if (!ordem) throw new AppError(404, 'Ordem de serviço não encontrada.');
   return ordem;
 }
 
 export async function editar(
   id: string,
-  input: Partial<OrdemInput>
+  input: Partial<OrdemInput>,
+  usuarioId: string
 ) {
+  if (input.clienteId) await assertClienteOwnedBy(input.clienteId, usuarioId);
+  if (input.veiculoId) await assertVeiculoOwnedBy(input.veiculoId, usuarioId);
+
   const sets: string[] = [];
   const vals: unknown[] = [];
   if (input.descricao !== undefined) {
@@ -167,9 +177,9 @@ export async function editar(
   if (sets.length === 0) {
     throw new AppError(400, 'Nenhum campo para atualizar.');
   }
-  const updated = await ordemRepository.update(id, sets, vals);
+  const updated = await ordemRepository.update(id, sets, vals, usuarioId);
   if (!updated) throw new AppError(404, 'Ordem não encontrada.');
-  return buscarCompleta(id);
+  return buscarCompleta(id, usuarioId);
 }
 
 /**
@@ -179,18 +189,23 @@ export async function editar(
  * if the DELETE failed after the loop, stock was already mutated but the
  * order still existed (data inconsistency). Confirmed with the user as the
  * one intentional behavior change in this refactor pass.
+ *
+ * The ownership check is the very first statement in the transaction --
+ * otherwise a foreign tenant's order id would restore OUR stock for their
+ * items before the (now usuario_id-scoped) DELETE finally 404s.
  */
-export async function remover(id: string): Promise<void> {
+export async function remover(id: string, usuarioId: string): Promise<void> {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    await assertOrdemOwnedBy(id, usuarioId, conn);
     const itens = await itemOsRepository.findByOrdemIdETipo(id, 'peca', conn);
     for (const item of itens) {
       if (item.peca_id) {
         await pecaRepository.restaurarEstoque(item.peca_id, item.quantidade, conn);
       }
     }
-    const removed = await ordemRepository.remove(id, conn);
+    const removed = await ordemRepository.remove(id, usuarioId, conn);
     if (!removed) throw new AppError(404, 'Ordem não encontrada.');
     await conn.commit();
   } catch (err) {
@@ -213,21 +228,22 @@ function calcularTotalComDesconto(
   return subtotal * (1 - desconto / 100);
 }
 
-export async function moverStatus(id: string, novoStatus: string) {
-  const ordem = await ordemRepository.findById(id);
+export async function moverStatus(id: string, novoStatus: string, usuarioId: string) {
+  const ordem = await ordemRepository.findById(id, usuarioId);
   if (!ordem) throw new AppError(404, 'Ordem não encontrada.');
 
   if (novoStatus === 'finalizado' && ordem.status !== 'finalizado') {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
-      await ordemRepository.finalizar(id, conn);
+      await ordemRepository.finalizar(id, usuarioId, conn);
       const itens = await itemOsRepository.findByOrdemId(id, conn);
       const total = calcularTotalComDesconto(itens, ordem.desconto_percentual);
       if (total > 0) {
         await contaRepository.createReceita(
           {
             id: uuidv4(),
+            usuarioId,
             descricao: `OS #${ordem.numero}`,
             valor: total,
             ordemServicoId: id,
@@ -243,10 +259,10 @@ export async function moverStatus(id: string, novoStatus: string) {
       conn.release();
     }
   } else {
-    await ordemRepository.updateStatus(id, novoStatus);
+    await ordemRepository.updateStatus(id, novoStatus, usuarioId);
   }
 
-  return buscarCompleta(id);
+  return buscarCompleta(id, usuarioId);
 }
 
 export interface NovoItemInput {
@@ -257,11 +273,15 @@ export interface NovoItemInput {
   pecaId?: string | null;
 }
 
-export async function adicionarItem(ordemId: string, input: NovoItemInput) {
+export async function adicionarItem(ordemId: string, input: NovoItemInput, usuarioId: string) {
+  await assertOrdemOwnedBy(ordemId, usuarioId);
   const itemId = uuidv4();
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    if (input.tipo === 'peca' && input.pecaId) {
+      await assertPecaOwnedBy(input.pecaId, usuarioId, conn);
+    }
     await itemOsRepository.create(
       itemId,
       ordemId,
@@ -284,7 +304,7 @@ export async function adicionarItem(ordemId: string, input: NovoItemInput) {
   } finally {
     conn.release();
   }
-  return buscarCompleta(ordemId);
+  return buscarCompleta(ordemId, usuarioId);
 }
 
 export interface EditarItemInput {
@@ -296,10 +316,12 @@ export interface EditarItemInput {
 export async function editarItem(
   ordemId: string,
   itemId: string,
-  input: EditarItemInput
+  input: EditarItemInput,
+  usuarioId: string
 ) {
+  await assertOrdemOwnedBy(ordemId, usuarioId);
   const item = await itemOsRepository.findById(itemId);
-  if (!item) throw new AppError(404, 'Item não encontrado.');
+  if (!item || item.ordem_id !== ordemId) throw new AppError(404, 'Item não encontrado.');
 
   const sets: string[] = [];
   const vals: unknown[] = [];
@@ -338,12 +360,13 @@ export async function editarItem(
   } finally {
     conn.release();
   }
-  return buscarCompleta(ordemId);
+  return buscarCompleta(ordemId, usuarioId);
 }
 
-export async function removerItem(ordemId: string, itemId: string) {
+export async function removerItem(ordemId: string, itemId: string, usuarioId: string) {
+  await assertOrdemOwnedBy(ordemId, usuarioId);
   const item = await itemOsRepository.findById(itemId);
-  if (!item) throw new AppError(404, 'Item não encontrado.');
+  if (!item || item.ordem_id !== ordemId) throw new AppError(404, 'Item não encontrado.');
 
   const conn = await pool.getConnection();
   try {
@@ -359,34 +382,36 @@ export async function removerItem(ordemId: string, itemId: string) {
   } finally {
     conn.release();
   }
-  return buscarCompleta(ordemId);
+  return buscarCompleta(ordemId, usuarioId);
 }
 
-export async function arquivar(id: string): Promise<void> {
-  const ordem = await ordemRepository.findById(id);
+export async function arquivar(id: string, usuarioId: string): Promise<void> {
+  const ordem = await ordemRepository.findById(id, usuarioId);
   if (!ordem) throw new AppError(404, 'Ordem não encontrada.');
   if (ordem.status !== 'finalizado') {
     throw new AppError(400, 'Apenas ordens finalizadas podem ser arquivadas.');
   }
-  await ordemRepository.setArquivado(id, true);
+  await ordemRepository.setArquivado(id, true, usuarioId);
 }
 
-export async function desarquivar(id: string) {
-  const updated = await ordemRepository.setArquivado(id, false);
+export async function desarquivar(id: string, usuarioId: string) {
+  const updated = await ordemRepository.setArquivado(id, false, usuarioId);
   if (!updated) {
     throw new AppError(404, 'Ordem não encontrada ou não está arquivada.');
   }
-  return buscarCompleta(id);
+  return buscarCompleta(id, usuarioId);
 }
 
 export async function atualizarChecklist(
   id: string,
-  checklist: Array<{ zona: string; temDano: boolean; descricao: string }>
+  checklist: Array<{ zona: string; temDano: boolean; descricao: string }>,
+  usuarioId: string
 ) {
   if (!Array.isArray(checklist)) {
     throw new AppError(400, 'checklist deve ser um array.');
   }
+  await assertOrdemOwnedBy(id, usuarioId);
   await checklistRepository.deleteByOrdemId(id);
   await checklistRepository.insertMany(id, checklist);
-  return buscarCompleta(id);
+  return buscarCompleta(id, usuarioId);
 }

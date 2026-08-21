@@ -22,55 +22,72 @@ function mapRecorrente(r: any) {
   };
 }
 
-export async function listar(_req: Request, res: Response): Promise<void> {
-  const [rows] = await pool.execute('SELECT * FROM despesas_recorrentes ORDER BY descricao');
+export async function listar(req: Request, res: Response): Promise<void> {
+  const [rows] = await pool.execute('SELECT * FROM despesas_recorrentes WHERE usuario_id = ? ORDER BY descricao', [
+    req.user!.sub,
+  ]);
   res.json((rows as any[]).map(mapRecorrente));
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const { categoria, descricao = '', valor, diaVencimento, observacoes = '' } = req.body;
   if (!CATEGORIAS_VALIDAS.includes(categoria)) throw new AppError(400, 'Categoria inválida.');
   if (!diaVencimento || diaVencimento < 1 || diaVencimento > 31) throw new AppError(400, 'Dia de vencimento deve ser entre 1 e 31.');
   if (!valor || Number(valor) <= 0) throw new AppError(400, 'Valor deve ser positivo.');
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO despesas_recorrentes (id, categoria, descricao, valor, dia_vencimento, observacoes) VALUES (?,?,?,?,?,?)',
-    [id, categoria, descricao, valor, diaVencimento, observacoes]
+    'INSERT INTO despesas_recorrentes (id, usuario_id, categoria, descricao, valor, dia_vencimento, observacoes) VALUES (?,?,?,?,?,?,?)',
+    [id, usuarioId, categoria, descricao, valor, diaVencimento, observacoes]
   );
-  const [rows] = await pool.execute('SELECT * FROM despesas_recorrentes WHERE id = ?', [id]);
+  const [rows] = await pool.execute('SELECT * FROM despesas_recorrentes WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
   res.status(201).json(mapRecorrente((rows as any[])[0]));
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const { categoria, descricao = '', valor, diaVencimento, observacoes = '' } = req.body;
   if (categoria && !CATEGORIAS_VALIDAS.includes(categoria)) throw new AppError(400, 'Categoria inválida.');
   if (diaVencimento && (diaVencimento < 1 || diaVencimento > 31)) throw new AppError(400, 'Dia de vencimento deve ser entre 1 e 31.');
   const [result] = await pool.execute(
-    'UPDATE despesas_recorrentes SET categoria=?, descricao=?, valor=?, dia_vencimento=?, observacoes=? WHERE id=?',
-    [categoria, descricao, valor, diaVencimento, observacoes, req.params.id]
+    'UPDATE despesas_recorrentes SET categoria=?, descricao=?, valor=?, dia_vencimento=?, observacoes=? WHERE id=? AND usuario_id=?',
+    [categoria, descricao, valor, diaVencimento, observacoes, req.params.id, usuarioId]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Despesa recorrente não encontrada.');
-  const [rows] = await pool.execute('SELECT * FROM despesas_recorrentes WHERE id = ?', [req.params.id]);
+  const [rows] = await pool.execute('SELECT * FROM despesas_recorrentes WHERE id = ? AND usuario_id = ?', [req.params.id, usuarioId]);
   res.json(mapRecorrente((rows as any[])[0]));
 }
 
 export async function remover(req: Request, res: Response): Promise<void> {
-  const [result] = await pool.execute('DELETE FROM despesas_recorrentes WHERE id = ?', [req.params.id]);
+  const [result] = await pool.execute('DELETE FROM despesas_recorrentes WHERE id = ? AND usuario_id = ?', [
+    req.params.id,
+    req.user!.sub,
+  ]);
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Despesa recorrente não encontrada.');
   res.status(204).send();
 }
 
 export async function toggleAtivo(req: Request, res: Response): Promise<void> {
-  const [rows] = await pool.execute('SELECT ativo FROM despesas_recorrentes WHERE id = ?', [req.params.id]);
+  const usuarioId = req.user!.sub;
+  const [rows] = await pool.execute('SELECT ativo FROM despesas_recorrentes WHERE id = ? AND usuario_id = ?', [
+    req.params.id,
+    usuarioId,
+  ]);
   const rec = (rows as any[])[0];
   if (!rec) throw new AppError(404, 'Despesa recorrente não encontrada.');
   const novoAtivo = rec.ativo ? 0 : 1;
-  await pool.execute('UPDATE despesas_recorrentes SET ativo=? WHERE id=?', [novoAtivo, req.params.id]);
-  const [updated] = await pool.execute('SELECT * FROM despesas_recorrentes WHERE id = ?', [req.params.id]);
+  await pool.execute('UPDATE despesas_recorrentes SET ativo=? WHERE id=? AND usuario_id=?', [novoAtivo, req.params.id, usuarioId]);
+  const [updated] = await pool.execute('SELECT * FROM despesas_recorrentes WHERE id = ? AND usuario_id = ?', [req.params.id, usuarioId]);
   res.json(mapRecorrente((updated as any[])[0]));
 }
 
-export async function processarRecorrentes(): Promise<void> {
+/**
+ * Sem `usuarioId`: caminho do cron/boot, processa a despesa recorrente de TODOS os tenants
+ * (cada `conta` gerada carrega o `usuario_id` da própria linha de `despesas_recorrentes`, então
+ * nada vaza entre contas). Com `usuarioId`: caminho do disparo manual (`processarManual`),
+ * processa só as recorrentes daquele usuário.
+ */
+export async function processarRecorrentes(usuarioId?: string): Promise<void> {
   try {
     const hojeStr = hojeLocal(); // YYYY-MM-DD
     const hoje = new Date(`${hojeStr}T00:00:00`);
@@ -79,10 +96,11 @@ export async function processarRecorrentes(): Promise<void> {
     const diaAlvo = alvo.getDate();
     const alvoStr = alvo.toISOString().slice(0, 10); // YYYY-MM-DD
 
-    const [rows] = await pool.execute(
-      'SELECT * FROM despesas_recorrentes WHERE ativo = 1 AND dia_vencimento = ?',
-      [diaAlvo]
-    );
+    const where = usuarioId
+      ? 'WHERE ativo = 1 AND dia_vencimento = ? AND usuario_id = ?'
+      : 'WHERE ativo = 1 AND dia_vencimento = ?';
+    const params = usuarioId ? [diaAlvo, usuarioId] : [diaAlvo];
+    const [rows] = await pool.execute(`SELECT * FROM despesas_recorrentes ${where}`, params);
     const recorrentes = rows as any[];
 
     for (const rec of recorrentes) {
@@ -95,8 +113,8 @@ export async function processarRecorrentes(): Promise<void> {
       const id = uuidv4();
       const mysqlDate = `${alvoStr} 00:00:00`;
       await pool.execute(
-        'INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, status, recorrente_id) VALUES (?,?,?,?,?,?,?,?)',
-        [id, 'despesa', rec.categoria, rec.descricao, rec.valor, mysqlDate, 'pendente', rec.id]
+        'INSERT INTO contas (id, usuario_id, tipo, categoria, descricao, valor, data_vencimento, status, recorrente_id) VALUES (?,?,?,?,?,?,?,?,?)',
+        [id, rec.usuario_id, 'despesa', rec.categoria, rec.descricao, rec.valor, mysqlDate, 'pendente', rec.id]
       );
       console.log(`✓ Despesa recorrente gerada: ${rec.descricao} — vencimento ${alvoStr}`);
     }
@@ -105,7 +123,7 @@ export async function processarRecorrentes(): Promise<void> {
   }
 }
 
-export async function processarManual(_req: Request, res: Response): Promise<void> {
-  await processarRecorrentes();
+export async function processarManual(req: Request, res: Response): Promise<void> {
+  await processarRecorrentes(req.user!.sub);
   res.json({ ok: true, message: 'Processamento de recorrentes executado.' });
 }

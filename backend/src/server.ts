@@ -17,7 +17,7 @@ async function main() {
   await processarRecorrentes();
 
   // Agenda processamento diário às 8h00
-  cron.schedule('0 8 * * *', processarRecorrentes);
+  cron.schedule('0 8 * * *', () => processarRecorrentes());
 
   const app = createApp();
 

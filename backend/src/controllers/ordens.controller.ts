@@ -18,60 +18,61 @@ export async function listar(req: Request, res: Response): Promise<void> {
       status,
       clienteId,
       somenteArquivadas,
+      usuarioId: req.user!.sub,
     })
   );
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
-  const ordem = await ordemService.criar(req.body);
+  const ordem = await ordemService.criar(req.body, req.user!.sub);
   res.status(201).json(ordem);
 }
 
 export async function buscar(req: Request, res: Response): Promise<void> {
-  res.json(await ordemService.buscar(req.params.id));
+  res.json(await ordemService.buscar(req.params.id, req.user!.sub));
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
-  res.json(await ordemService.editar(req.params.id, req.body));
+  res.json(await ordemService.editar(req.params.id, req.body, req.user!.sub));
 }
 
 export async function remover(req: Request, res: Response): Promise<void> {
-  await ordemService.remover(req.params.id);
+  await ordemService.remover(req.params.id, req.user!.sub);
   res.status(204).send();
 }
 
 export async function moverStatus(req: Request, res: Response): Promise<void> {
   const { status } = req.body as { status: string };
-  res.json(await ordemService.moverStatus(req.params.id, status));
+  res.json(await ordemService.moverStatus(req.params.id, status, req.user!.sub));
 }
 
 export async function adicionarItem(req: Request, res: Response): Promise<void> {
-  const ordem = await ordemService.adicionarItem(req.params.id, req.body);
+  const ordem = await ordemService.adicionarItem(req.params.id, req.body, req.user!.sub);
   res.status(201).json(ordem);
 }
 
 export async function editarItem(req: Request, res: Response): Promise<void> {
   res.json(
-    await ordemService.editarItem(req.params.id, req.params.itemId, req.body)
+    await ordemService.editarItem(req.params.id, req.params.itemId, req.body, req.user!.sub)
   );
 }
 
 export async function removerItem(req: Request, res: Response): Promise<void> {
-  res.json(await ordemService.removerItem(req.params.id, req.params.itemId));
+  res.json(await ordemService.removerItem(req.params.id, req.params.itemId, req.user!.sub));
 }
 
 export async function arquivar(req: Request, res: Response): Promise<void> {
-  await ordemService.arquivar(req.params.id);
+  await ordemService.arquivar(req.params.id, req.user!.sub);
   res.status(204).send();
 }
 
 export async function desarquivar(req: Request, res: Response): Promise<void> {
-  res.json(await ordemService.desarquivar(req.params.id));
+  res.json(await ordemService.desarquivar(req.params.id, req.user!.sub));
 }
 
 export async function atualizarChecklist(
   req: Request,
   res: Response
 ): Promise<void> {
-  res.json(await ordemService.atualizarChecklist(req.params.id, req.body.checklist));
+  res.json(await ordemService.atualizarChecklist(req.params.id, req.body.checklist, req.user!.sub));
 }

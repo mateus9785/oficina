@@ -5,6 +5,7 @@ import * as anexosCtrl from '../controllers/anexos.controller';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { asyncHandler } from '../utils/asyncHandler';
+import { assertOrdemOwnedBy } from '../utils/ownership';
 
 const router = Router();
 router.use(requireAuth);
@@ -90,6 +91,10 @@ router.post(
   '/:id/anexos',
   param('id').isUUID(),
   validate,
+  asyncHandler(async (req, _res, next) => {
+    await assertOrdemOwnedBy(req.params.id, req.user!.sub);
+    next();
+  }),
   (req, res, next) => {
     anexosCtrl.uploadMiddleware(req, res, (err) => {
       if (err) return next(err);

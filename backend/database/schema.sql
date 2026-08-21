@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clientes (
   id             CHAR(36)      NOT NULL,
+  usuario_id     CHAR(36)      NOT NULL,
   nome           VARCHAR(120)  NOT NULL,
   cpf_cnpj       VARCHAR(20)   NULL DEFAULT NULL,
   telefone       VARCHAR(20)   NOT NULL DEFAULT '',
@@ -45,7 +46,9 @@ CREATE TABLE IF NOT EXISTS clientes (
   criado_em      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   atualizado_em  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_cliente_cpf_cnpj (cpf_cnpj)
+  KEY idx_cliente_usuario (usuario_id),
+  UNIQUE KEY uq_cliente_usuario_cpf_cnpj (usuario_id, cpf_cnpj),
+  CONSTRAINT fk_cliente_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
@@ -53,6 +56,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS veiculos (
   id            CHAR(36)      NOT NULL,
+  usuario_id    CHAR(36)      NOT NULL,
   cliente_id    CHAR(36)      NOT NULL,
   marca         VARCHAR(60)   NOT NULL DEFAULT '',
   modelo        VARCHAR(80)   NOT NULL DEFAULT '',
@@ -64,9 +68,11 @@ CREATE TABLE IF NOT EXISTS veiculos (
   criado_em     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   atualizado_em DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_veiculo_placa (placa),
+  UNIQUE KEY uq_veiculo_usuario_placa (usuario_id, placa),
   KEY idx_veiculo_cliente (cliente_id),
-  CONSTRAINT fk_veiculo_cliente FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE
+  KEY idx_veiculo_usuario (usuario_id),
+  CONSTRAINT fk_veiculo_cliente FOREIGN KEY (cliente_id) REFERENCES clientes (id) ON DELETE CASCADE,
+  CONSTRAINT fk_veiculo_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
@@ -74,6 +80,7 @@ CREATE TABLE IF NOT EXISTS veiculos (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS pecas (
   id              CHAR(36)      NOT NULL,
+  usuario_id      CHAR(36)      NOT NULL,
   nome            VARCHAR(120)  NOT NULL,
   categoria       ENUM('motor','freio','suspensao','eletrica','filtro','oleo','transmissao','carroceria','acessorio','outros') NOT NULL DEFAULT 'outros',
   marca           VARCHAR(60)   NOT NULL DEFAULT '',
@@ -87,7 +94,9 @@ CREATE TABLE IF NOT EXISTS pecas (
   uso_total       INT           NOT NULL DEFAULT 0,
   criado_em       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   atualizado_em   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY idx_peca_usuario (usuario_id),
+  CONSTRAINT fk_peca_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
@@ -112,6 +121,7 @@ CREATE TABLE IF NOT EXISTS historico_precos (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ordens_servico (
   id                  CHAR(36)      NOT NULL,
+  usuario_id          CHAR(36)      NOT NULL,
   numero              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   cliente_id          CHAR(36)      NULL DEFAULT NULL,
   veiculo_id          CHAR(36)      NULL DEFAULT NULL,
@@ -133,8 +143,10 @@ CREATE TABLE IF NOT EXISTS ordens_servico (
   KEY idx_os_veiculo (veiculo_id),
   KEY idx_os_status (status),
   KEY idx_os_arquivado (arquivado),
+  KEY idx_os_usuario (usuario_id),
   CONSTRAINT fk_os_cliente FOREIGN KEY (cliente_id) REFERENCES clientes (id),
-  CONSTRAINT fk_os_veiculo FOREIGN KEY (veiculo_id) REFERENCES veiculos (id)
+  CONSTRAINT fk_os_veiculo FOREIGN KEY (veiculo_id) REFERENCES veiculos (id),
+  CONSTRAINT fk_os_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
@@ -175,6 +187,7 @@ CREATE TABLE IF NOT EXISTS checklist_entrada (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contas (
   id                CHAR(36)      NOT NULL,
+  usuario_id        CHAR(36)      NOT NULL,
   tipo              ENUM('receita','despesa') NOT NULL,
   categoria         ENUM('ordem_servico','venda_peca','compra_peca','aluguel','salario','energia','agua','internet','manutencao','outros') NOT NULL DEFAULT 'outros',
   descricao         VARCHAR(200)  NOT NULL DEFAULT '',
@@ -192,7 +205,9 @@ CREATE TABLE IF NOT EXISTS contas (
   KEY idx_conta_vencimento (data_vencimento),
   KEY idx_conta_os (ordem_servico_id),
   KEY idx_conta_recorrente (recorrente_id),
-  CONSTRAINT fk_conta_os FOREIGN KEY (ordem_servico_id) REFERENCES ordens_servico (id) ON DELETE SET NULL
+  KEY idx_conta_usuario (usuario_id),
+  CONSTRAINT fk_conta_os FOREIGN KEY (ordem_servico_id) REFERENCES ordens_servico (id) ON DELETE SET NULL,
+  CONSTRAINT fk_conta_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
@@ -200,6 +215,7 @@ CREATE TABLE IF NOT EXISTS contas (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS despesas_recorrentes (
   id             CHAR(36)      NOT NULL,
+  usuario_id     CHAR(36)      NOT NULL,
   categoria      ENUM('aluguel','salario','energia','agua','internet','manutencao','outros') NOT NULL DEFAULT 'outros',
   descricao      VARCHAR(200)  NOT NULL DEFAULT '',
   valor          DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -208,20 +224,22 @@ CREATE TABLE IF NOT EXISTS despesas_recorrentes (
   observacoes    VARCHAR(1000) NOT NULL DEFAULT '',
   criado_em      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   atualizado_em  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY idx_recorrente_usuario (usuario_id),
+  CONSTRAINT fk_recorrente_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ------------------------------------------------------------
--- configuracoes (chave-valor para parametros do sistema)
+-- configuracoes (chave-valor por usuário para parametros do sistema)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS configuracoes (
+  usuario_id    CHAR(36)      NOT NULL,
   chave         VARCHAR(60)   NOT NULL,
   valor         VARCHAR(500)  NOT NULL DEFAULT '',
   atualizado_em DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (chave)
+  PRIMARY KEY (usuario_id, chave),
+  CONSTRAINT fk_config_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT IGNORE INTO configuracoes (chave, valor) VALUES ('desconto_maximo', '100');
 
 -- ------------------------------------------------------------
 -- anexos_os (imagens e vídeos vinculados a uma OS)

@@ -1,8 +1,28 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../config/database';
 import { signToken } from '../utils/jwt';
 import { AppError } from '../middleware/errorHandler';
+import { env } from '../config/env';
+
+export async function register(req: Request, res: Response): Promise<void> {
+  const { nome, email, senha } = req.body as { nome: string; email: string; senha: string };
+  const emailNormalizado = email.toLowerCase().trim();
+
+  const [existing] = await pool.execute('SELECT id FROM usuarios WHERE email = ?', [emailNormalizado]);
+  if ((existing as any[]).length > 0) throw new AppError(409, 'E-mail já cadastrado.');
+
+  const id = uuidv4();
+  const hash = await bcrypt.hash(senha, env.BCRYPT_ROUNDS);
+  await pool.execute(
+    'INSERT INTO usuarios (id, nome, email, senha_hash, role) VALUES (?,?,?,?,?)',
+    [id, nome, emailNormalizado, hash, 'funcionario']
+  );
+
+  const token = signToken({ sub: id, email: emailNormalizado, role: 'funcionario' });
+  res.status(201).json({ token, usuario: { id, nome, email: emailNormalizado, role: 'funcionario' } });
+}
 
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, senha } = req.body as { email: string; senha: string };

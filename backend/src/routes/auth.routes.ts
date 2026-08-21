@@ -1,12 +1,24 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { login, getMe, mudarSenha } from '../controllers/auth.controller';
+import { login, register, getMe, mudarSenha } from '../controllers/auth.controller';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { authLimiter } from '../middleware/rateLimiter';
 import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
+
+router.post(
+  '/register',
+  authLimiter,
+  [
+    body('nome').trim().notEmpty().withMessage('Nome obrigatório.'),
+    body('email').isEmail().withMessage('Email inválido.'),
+    body('senha').isLength({ min: 6 }).withMessage('Senha deve ter ao menos 6 caracteres.'),
+  ],
+  validate,
+  asyncHandler(register)
+);
 
 router.post(
   '/login',

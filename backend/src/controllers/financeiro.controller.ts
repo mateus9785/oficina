@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { getPagination, paginatedResponse } from '../utils/pagination';
+import { assertOrdemOwnedBy } from '../utils/ownership';
 
 /** Data de hoje no fuso horário do Brasil (America/Sao_Paulo), formato YYYY-MM-DD. */
 function hojeLocal(): string {
@@ -29,12 +30,13 @@ function mapConta(r: any) {
 
 export async function listar(req: Request, res: Response): Promise<void> {
   const { page, limit, offset, sqlLimit, sqlOffset } = getPagination(req);
+  const usuarioId = req.user!.sub;
   const tipo = (req.query.tipo as string) || '';
   const status = (req.query.status as string) || '';
 
   const hoje = hojeLocal();
-  let where = 'WHERE 1=1';
-  const params: any[] = [];
+  let where = 'WHERE usuario_id = ?';
+  const params: any[] = [usuarioId];
   if (tipo) { where += ' AND tipo = ?'; params.push(tipo); }
   if (status === 'atrasado') {
     where += " AND status != 'pago' AND DATE(data_vencimento) < ?"; params.push(hoje);
@@ -65,48 +67,53 @@ export async function listar(req: Request, res: Response): Promise<void> {
 }
 
 export async function criar(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const { tipo, categoria, descricao = '', valor, dataVencimento, status = 'pendente', ordemServicoId } = req.body;
+  if (ordemServicoId) await assertOrdemOwnedBy(ordemServicoId, usuarioId);
   const mysqlDate = new Date(dataVencimento).toISOString().slice(0, 19).replace('T', ' ');
   const id = uuidv4();
   await pool.execute(
-    'INSERT INTO contas (id, tipo, categoria, descricao, valor, data_vencimento, status, ordem_servico_id) VALUES (?,?,?,?,?,?,?,?)',
-    [id, tipo, categoria, descricao, valor, mysqlDate, status, ordemServicoId ?? null]
+    'INSERT INTO contas (id, usuario_id, tipo, categoria, descricao, valor, data_vencimento, status, ordem_servico_id) VALUES (?,?,?,?,?,?,?,?,?)',
+    [id, usuarioId, tipo, categoria, descricao, valor, mysqlDate, status, ordemServicoId ?? null]
   );
-  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [id]);
+  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
   res.status(201).json(mapConta((rows as any[])[0]));
 }
 
 export async function buscar(req: Request, res: Response): Promise<void> {
-  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [req.params.id]);
+  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ? AND usuario_id = ?', [req.params.id, req.user!.sub]);
   const conta = (rows as any[])[0];
   if (!conta) throw new AppError(404, 'Conta não encontrada.');
   res.json(mapConta(conta));
 }
 
 export async function editar(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const { tipo, categoria, descricao = '', valor, dataVencimento, status, ordemServicoId } = req.body;
+  if (ordemServicoId) await assertOrdemOwnedBy(ordemServicoId, usuarioId);
   const mysqlDate = new Date(dataVencimento).toISOString().slice(0, 19).replace('T', ' ');
   const [result] = await pool.execute(
-    'UPDATE contas SET tipo=?, categoria=?, descricao=?, valor=?, data_vencimento=?, status=?, ordem_servico_id=? WHERE id=?',
-    [tipo, categoria, descricao, valor, mysqlDate, status ?? 'pendente', ordemServicoId ?? null, req.params.id]
+    'UPDATE contas SET tipo=?, categoria=?, descricao=?, valor=?, data_vencimento=?, status=?, ordem_servico_id=? WHERE id=? AND usuario_id=?',
+    [tipo, categoria, descricao, valor, mysqlDate, status ?? 'pendente', ordemServicoId ?? null, req.params.id, usuarioId]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Conta não encontrada.');
-  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [req.params.id]);
+  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ? AND usuario_id = ?', [req.params.id, usuarioId]);
   res.json(mapConta((rows as any[])[0]));
 }
 
 export async function remover(req: Request, res: Response): Promise<void> {
-  const [result] = await pool.execute('DELETE FROM contas WHERE id = ?', [req.params.id]);
+  const [result] = await pool.execute('DELETE FROM contas WHERE id = ? AND usuario_id = ?', [req.params.id, req.user!.sub]);
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Conta não encontrada.');
   res.status(204).send();
 }
 
 export async function pagar(req: Request, res: Response): Promise<void> {
+  const usuarioId = req.user!.sub;
   const [result] = await pool.execute(
-    "UPDATE contas SET status='pago', data_pagamento=NOW() WHERE id=?",
-    [req.params.id]
+    "UPDATE contas SET status='pago', data_pagamento=NOW() WHERE id=? AND usuario_id=?",
+    [req.params.id, usuarioId]
   );
   if ((result as any).affectedRows === 0) throw new AppError(404, 'Conta não encontrada.');
-  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ?', [req.params.id]);
+  const [rows] = await pool.execute('SELECT * FROM contas WHERE id = ? AND usuario_id = ?', [req.params.id, usuarioId]);
   res.json(mapConta((rows as any[])[0]));
 }

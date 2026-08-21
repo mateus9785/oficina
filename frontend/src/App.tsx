@@ -4,7 +4,7 @@ import { Toaster } from 'sonner';
 import { AppLayout } from './components/layout/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
 const ClientesPage = lazy(() => import('./pages/ClientesPage').then(m => ({ default: m.ClientesPage })));
 const ClienteDetalhePage = lazy(() => import('./pages/ClienteDetalhePage').then(m => ({ default: m.ClienteDetalhePage })));
@@ -26,7 +26,7 @@ export default function App() {
       <Toaster position="top-right" richColors />
       <Suspense fallback={null}>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LandingPage />} />
           <Route
             element={
               <ProtectedRoute>

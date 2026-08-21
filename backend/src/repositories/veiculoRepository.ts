@@ -8,11 +8,12 @@ function exec(conn?: PoolConnection) {
 
 export async function findByClienteId(
   clienteId: string,
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<VeiculoRow[]> {
   const [rows] = await exec(conn)<VeiculoRow[]>(
-    'SELECT * FROM veiculos WHERE cliente_id = ? ORDER BY modelo',
-    [clienteId]
+    'SELECT * FROM veiculos WHERE cliente_id = ? AND usuario_id = ? ORDER BY modelo',
+    [clienteId, usuarioId]
   );
   return rows;
 }

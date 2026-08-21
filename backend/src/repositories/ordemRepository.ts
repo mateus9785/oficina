@@ -7,6 +7,7 @@ function exec(conn?: PoolConnection) {
 }
 
 export interface OrdemFilter {
+  usuarioId: string;
   status: string;
   clienteId: string;
   somenteArquivadas: boolean;
@@ -18,6 +19,7 @@ export interface OrdemPagination {
 }
 
 export interface NovaOrdemData {
+  usuarioId: string;
   clienteId: string | null;
   veiculoId: string | null;
   nomeCliente: string;
@@ -31,6 +33,8 @@ export interface NovaOrdemData {
 function whereClause(filter: OrdemFilter): { where: string; params: unknown[] } {
   let where = filter.somenteArquivadas ? 'WHERE arquivado = 1' : 'WHERE arquivado = 0';
   const params: unknown[] = [];
+  where += ' AND usuario_id = ?';
+  params.push(filter.usuarioId);
   if (filter.status) {
     where += ' AND status = ?';
     params.push(filter.status);
@@ -69,11 +73,12 @@ export async function count(
 
 export async function findById(
   id: string,
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<OrdemServicoRow | null> {
   const [rows] = await exec(conn)<OrdemServicoRow[]>(
-    'SELECT * FROM ordens_servico WHERE id = ?',
-    [id]
+    'SELECT * FROM ordens_servico WHERE id = ? AND usuario_id = ?',
+    [id, usuarioId]
   );
   return rows[0] ?? null;
 }
@@ -85,10 +90,11 @@ export async function create(
 ): Promise<void> {
   await exec(conn)(
     `INSERT INTO ordens_servico
-       (id, cliente_id, veiculo_id, nome_cliente, descricao_veiculo, descricao, km_entrada, previsao_entrega, desconto_percentual)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
+       (id, usuario_id, cliente_id, veiculo_id, nome_cliente, descricao_veiculo, descricao, km_entrada, previsao_entrega, desconto_percentual)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
     [
       id,
+      data.usuarioId,
       data.clienteId,
       data.veiculoId,
       data.nomeCliente,
@@ -105,22 +111,24 @@ export async function update(
   id: string,
   sets: string[],
   vals: unknown[],
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<boolean> {
   const [result] = await exec(conn)<ResultSetHeader>(
-    `UPDATE ordens_servico SET ${sets.join(',')} WHERE id=?`,
-    [...vals, id]
+    `UPDATE ordens_servico SET ${sets.join(',')} WHERE id=? AND usuario_id=?`,
+    [...vals, id, usuarioId]
   );
   return result.affectedRows > 0;
 }
 
 export async function remove(
   id: string,
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<boolean> {
   const [result] = await exec(conn)<ResultSetHeader>(
-    'DELETE FROM ordens_servico WHERE id = ?',
-    [id]
+    'DELETE FROM ordens_servico WHERE id = ? AND usuario_id = ?',
+    [id, usuarioId]
   );
   return result.affectedRows > 0;
 }
@@ -128,31 +136,33 @@ export async function remove(
 export async function updateStatus(
   id: string,
   status: string,
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<void> {
-  await exec(conn)('UPDATE ordens_servico SET status=? WHERE id=?', [status, id]);
+  await exec(conn)('UPDATE ordens_servico SET status=? WHERE id=? AND usuario_id=?', [status, id, usuarioId]);
 }
 
-export async function finalizar(id: string, conn: PoolConnection): Promise<void> {
+export async function finalizar(id: string, usuarioId: string, conn: PoolConnection): Promise<void> {
   await conn.execute(
-    "UPDATE ordens_servico SET status='finalizado', data_finalizacao=NOW() WHERE id=?",
-    [id]
+    "UPDATE ordens_servico SET status='finalizado', data_finalizacao=NOW() WHERE id=? AND usuario_id=?",
+    [id, usuarioId]
   );
 }
 
 export async function setArquivado(
   id: string,
   arquivado: boolean,
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<boolean> {
   const [result] = arquivado
     ? await exec(conn)<ResultSetHeader>(
-        'UPDATE ordens_servico SET arquivado = 1 WHERE id = ?',
-        [id]
+        'UPDATE ordens_servico SET arquivado = 1 WHERE id = ? AND usuario_id = ?',
+        [id, usuarioId]
       )
     : await exec(conn)<ResultSetHeader>(
-        'UPDATE ordens_servico SET arquivado = 0 WHERE id = ? AND arquivado = 1',
-        [id]
+        'UPDATE ordens_servico SET arquivado = 0 WHERE id = ? AND usuario_id = ? AND arquivado = 1',
+        [id, usuarioId]
       );
   return result.affectedRows > 0;
 }

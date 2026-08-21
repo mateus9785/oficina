@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { pool } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
+import { assertOrdemOwnedBy } from '../utils/ownership';
 
 // ---------- Multer config ----------
 
@@ -58,6 +59,7 @@ function mapAnexo(r: any) {
 }
 
 export async function listar(req: Request, res: Response): Promise<void> {
+  await assertOrdemOwnedBy(req.params.id, req.user!.sub);
   const [rows] = await pool.execute(
     'SELECT * FROM anexos_os WHERE ordem_id = ? ORDER BY criado_em DESC',
     [req.params.id]
@@ -93,6 +95,7 @@ export async function upload(req: Request, res: Response): Promise<void> {
 }
 
 export async function remover(req: Request, res: Response): Promise<void> {
+  await assertOrdemOwnedBy(req.params.id, req.user!.sub);
   const [rows] = await pool.execute(
     'SELECT * FROM anexos_os WHERE id = ? AND ordem_id = ?',
     [req.params.anexoId, req.params.id]

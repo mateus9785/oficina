@@ -7,6 +7,7 @@ function exec(conn?: PoolConnection) {
 }
 
 export interface ClienteFilter {
+  usuarioId: string;
   search: string;
 }
 
@@ -16,6 +17,7 @@ export interface ClientePagination {
 }
 
 export interface NovoClienteData {
+  usuarioId: string;
   nome: string;
   cpfCnpj: string | null;
   telefone: string;
@@ -38,8 +40,8 @@ export async function findAll(
 ): Promise<ClienteRow[]> {
   const like = `%${filter.search}%`;
   const [rows] = await exec(conn)<ClienteRow[]>(
-    'SELECT * FROM clientes WHERE nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ? ORDER BY nome LIMIT ? OFFSET ?',
-    [like, like, like, pagination.sqlLimit, pagination.sqlOffset]
+    'SELECT * FROM clientes WHERE usuario_id = ? AND (nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ?) ORDER BY nome LIMIT ? OFFSET ?',
+    [filter.usuarioId, like, like, like, pagination.sqlLimit, pagination.sqlOffset]
   );
   return rows;
 }
@@ -50,31 +52,33 @@ export async function count(
 ): Promise<number> {
   const like = `%${filter.search}%`;
   const [rows] = await exec(conn)<(RowDataPacket & { total: number })[]>(
-    'SELECT COUNT(*) as total FROM clientes WHERE nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ?',
-    [like, like, like]
+    'SELECT COUNT(*) as total FROM clientes WHERE usuario_id = ? AND (nome LIKE ? OR cpf_cnpj LIKE ? OR email LIKE ?)',
+    [filter.usuarioId, like, like, like]
   );
   return Number(rows[0].total);
 }
 
 export async function findByCpf(
   cpf: string,
+  usuarioId: string,
   excludeId?: string,
   conn?: PoolConnection
 ): Promise<(RowDataPacket & { id: string }) | null> {
   const [rows] = await exec(conn)<(RowDataPacket & { id: string })[]>(
-    'SELECT id FROM clientes WHERE cpf_cnpj = ? AND id != ?',
-    [cpf, excludeId || '']
+    'SELECT id FROM clientes WHERE cpf_cnpj = ? AND usuario_id = ? AND id != ?',
+    [cpf, usuarioId, excludeId || '']
   );
   return rows[0] ?? null;
 }
 
 export async function findById(
   id: string,
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<ClienteRow | null> {
   const [rows] = await exec(conn)<ClienteRow[]>(
-    'SELECT * FROM clientes WHERE id = ?',
-    [id]
+    'SELECT * FROM clientes WHERE id = ? AND usuario_id = ?',
+    [id, usuarioId]
   );
   return rows[0] ?? null;
 }
@@ -86,11 +90,12 @@ export async function create(
 ): Promise<void> {
   await exec(conn)(
     `INSERT INTO clientes
-       (id, nome, cpf_cnpj, telefone, email,
+       (id, usuario_id, nome, cpf_cnpj, telefone, email,
         data_nascimento, cep, cidade, estado, rua, numero, complemento)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       id,
+      data.usuarioId,
       data.nome,
       data.cpfCnpj,
       data.telefone,
@@ -115,7 +120,7 @@ export async function update(
     `UPDATE clientes SET
        nome=?, cpf_cnpj=?, telefone=?, email=?,
        data_nascimento=?, cep=?, cidade=?, estado=?, rua=?, numero=?, complemento=?
-     WHERE id=?`,
+     WHERE id=? AND usuario_id=?`,
     [
       data.nome,
       data.cpfCnpj,
@@ -129,6 +134,7 @@ export async function update(
       data.numero,
       data.complemento,
       id,
+      data.usuarioId,
     ]
   );
   return result.affectedRows > 0;
@@ -136,11 +142,12 @@ export async function update(
 
 export async function remove(
   id: string,
+  usuarioId: string,
   conn?: PoolConnection
 ): Promise<boolean> {
   const [result] = await exec(conn)<ResultSetHeader>(
-    'DELETE FROM clientes WHERE id = ?',
-    [id]
+    'DELETE FROM clientes WHERE id = ? AND usuario_id = ?',
+    [id, usuarioId]
   );
   return result.affectedRows > 0;
 }

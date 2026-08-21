@@ -11,6 +11,17 @@ const columnMigrations: { table: string; column: string; definition: string }[] 
   { table: 'historico_precos', column: 'valor_total', definition: 'DECIMAL(10,2) NOT NULL DEFAULT 0.00' },
   { table: 'historico_precos', column: 'preco_venda', definition: 'DECIMAL(10,2) NOT NULL DEFAULT 0.00' },
   { table: 'ordens_servico', column: 'arquivado', definition: 'TINYINT(1) NOT NULL DEFAULT 0' },
+  // Isolamento por conta: rede de segurança para um banco de dev pré-existente que já tinha essas
+  // tabelas sem dono. Adiciona a coluna como NULL (sem FK) -- não tenta virar NOT NULL/FK sozinho
+  // porque isso exigiria um backfill de qual usuário é dono de cada linha, que só um humano decide.
+  // Em produção essas tabelas foram recriadas do zero (estavam vazias), então schema.sql já aplica
+  // a coluna correta via CREATE TABLE; este bloco nunca chega a rodar lá.
+  { table: 'clientes', column: 'usuario_id', definition: 'CHAR(36) NULL' },
+  { table: 'veiculos', column: 'usuario_id', definition: 'CHAR(36) NULL' },
+  { table: 'pecas', column: 'usuario_id', definition: 'CHAR(36) NULL' },
+  { table: 'ordens_servico', column: 'usuario_id', definition: 'CHAR(36) NULL' },
+  { table: 'contas', column: 'usuario_id', definition: 'CHAR(36) NULL' },
+  { table: 'despesas_recorrentes', column: 'usuario_id', definition: 'CHAR(36) NULL' },
 ];
 
 async function migrate() {

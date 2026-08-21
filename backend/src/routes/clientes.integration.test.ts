@@ -3,8 +3,10 @@ import request from 'supertest';
 import { v4 as uuidv4 } from 'uuid';
 import { createApp } from '../app';
 import { pool } from '../config/database';
-import { resetDb } from '../test-helpers/testDb';
+import { resetDb, criarUsuarioTeste } from '../test-helpers/testDb';
 import { authHeader } from '../test-helpers/testAuth';
+
+const USUARIO_B = '00000000-0000-0000-0000-00000000000b';
 
 const app = createApp();
 
@@ -108,5 +110,43 @@ describe('clientes routes', () => {
   it('rejects requests with no auth header', async () => {
     const res = await request(app).get('/api/v1/clientes');
     expect(res.status).toBe(401);
+  });
+
+  describe('isolamento por conta', () => {
+    it('um usuário não vê nem acessa clientes de outro', async () => {
+      await criarUsuarioTeste(USUARIO_B, 'b@teste.local');
+
+      const create = await request(app)
+        .post('/api/v1/clientes')
+        .set('Authorization', authHeader())
+        .send({ nome: 'Cliente do A' });
+      const idDoA = create.body.id as string;
+
+      const listarComoB = await request(app)
+        .get('/api/v1/clientes')
+        .set('Authorization', authHeader({ sub: USUARIO_B }));
+      expect(listarComoB.body.meta.total).toBe(0);
+
+      const buscarComoB = await request(app)
+        .get(`/api/v1/clientes/${idDoA}`)
+        .set('Authorization', authHeader({ sub: USUARIO_B }));
+      expect(buscarComoB.status).toBe(404);
+    });
+
+    it('dois usuários podem cadastrar o mesmo CPF sem conflito', async () => {
+      await criarUsuarioTeste(USUARIO_B, 'b@teste.local');
+
+      const criarComoA = await request(app)
+        .post('/api/v1/clientes')
+        .set('Authorization', authHeader())
+        .send({ nome: 'Cliente A', cpfCnpj: '999.999.999-99' });
+      expect(criarComoA.status).toBe(201);
+
+      const criarComoB = await request(app)
+        .post('/api/v1/clientes')
+        .set('Authorization', authHeader({ sub: USUARIO_B }))
+        .send({ nome: 'Cliente B', cpfCnpj: '999.999.999-99' });
+      expect(criarComoB.status).toBe(201);
+    });
   });
 });

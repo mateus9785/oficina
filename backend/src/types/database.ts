@@ -7,6 +7,7 @@ import { RowDataPacket } from 'mysql2/promise';
 
 export interface ClienteRow extends RowDataPacket {
   id: string;
+  usuario_id: string;
   nome: string;
   cpf_cnpj: string | null;
   telefone: string;
@@ -27,6 +28,7 @@ export interface ClienteRow extends RowDataPacket {
 
 export interface VeiculoRow extends RowDataPacket {
   id: string;
+  usuario_id: string;
   cliente_id: string;
   marca: string;
   modelo: string;
@@ -41,6 +43,7 @@ export interface VeiculoRow extends RowDataPacket {
 
 export interface OrdemServicoRow extends RowDataPacket {
   id: string;
+  usuario_id: string;
   numero: number;
   cliente_id: string | null;
   veiculo_id: string | null;

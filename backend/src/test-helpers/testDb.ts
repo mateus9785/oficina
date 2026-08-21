@@ -22,6 +22,12 @@ const TABLES = [
  * run on the same pooled connection, or the pool may hand the TRUNCATEs a
  * different connection than the one where checks were disabled.
  */
+// Mesmo id usado por authHeader() em testAuth.ts. As tabelas de negócio agora têm
+// usuario_id NOT NULL + FK para usuarios(id): sem essa linha existir, qualquer INSERT
+// feito com o token padrão dos testes quebraria com ER_NO_REFERENCED_ROW -- o CI roda
+// só `db:migrate`, não `db:seed`, então não dá pra contar com o admin semeado existir.
+const USUARIO_TESTE_ID = '00000000-0000-0000-0000-000000000001';
+
 export async function resetDb(): Promise<void> {
   const conn = await pool.getConnection();
   try {
@@ -30,7 +36,19 @@ export async function resetDb(): Promise<void> {
       await conn.query(`TRUNCATE TABLE ${table}`);
     }
     await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+    await conn.query(
+      `INSERT IGNORE INTO usuarios (id, nome, email, senha_hash, role) VALUES (?, 'Admin Teste', 'admin@teste.local', 'x', 'admin')`,
+      [USUARIO_TESTE_ID]
+    );
   } finally {
     conn.release();
   }
+}
+
+/** Garante que um segundo usuário de teste existe, para cenários de isolamento por conta. */
+export async function criarUsuarioTeste(id: string, email: string): Promise<void> {
+  await pool.query(
+    `INSERT IGNORE INTO usuarios (id, nome, email, senha_hash, role) VALUES (?, 'Usuário Teste', ?, 'x', 'funcionario')`,
+    [id, email]
+  );
 }
