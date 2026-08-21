@@ -1,5 +1,6 @@
-import { PoolConnection, RowDataPacket } from 'mysql2/promise';
+import { PoolConnection } from 'mysql2/promise';
 import { pool } from '../config/database';
+import { VeiculoRow } from '../types/database';
 
 function exec(conn?: PoolConnection) {
   return conn ? conn.execute.bind(conn) : pool.execute.bind(pool);
@@ -8,8 +9,8 @@ function exec(conn?: PoolConnection) {
 export async function findByClienteId(
   clienteId: string,
   conn?: PoolConnection
-): Promise<RowDataPacket[]> {
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+): Promise<VeiculoRow[]> {
+  const [rows] = await exec(conn)<VeiculoRow[]>(
     'SELECT * FROM veiculos WHERE cliente_id = ? ORDER BY modelo',
     [clienteId]
   );

@@ -1,5 +1,6 @@
 import { PoolConnection, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { pool } from '../config/database';
+import { OrdemServicoRow } from '../types/database';
 
 function exec(conn?: PoolConnection) {
   return conn ? conn.execute.bind(conn) : pool.execute.bind(pool);
@@ -45,9 +46,9 @@ export async function findAll(
   filter: OrdemFilter,
   pagination: OrdemPagination,
   conn?: PoolConnection
-): Promise<RowDataPacket[]> {
+): Promise<OrdemServicoRow[]> {
   const { where, params } = whereClause(filter);
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+  const [rows] = await exec(conn)<OrdemServicoRow[]>(
     `SELECT * FROM ordens_servico ${where} ORDER BY data_abertura DESC LIMIT ? OFFSET ?`,
     [...params, pagination.sqlLimit, pagination.sqlOffset]
   );
@@ -59,7 +60,7 @@ export async function count(
   conn?: PoolConnection
 ): Promise<number> {
   const { where, params } = whereClause(filter);
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+  const [rows] = await exec(conn)<(RowDataPacket & { total: number })[]>(
     `SELECT COUNT(*) as total FROM ordens_servico ${where}`,
     params
   );
@@ -69,8 +70,8 @@ export async function count(
 export async function findById(
   id: string,
   conn?: PoolConnection
-): Promise<RowDataPacket | null> {
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+): Promise<OrdemServicoRow | null> {
+  const [rows] = await exec(conn)<OrdemServicoRow[]>(
     'SELECT * FROM ordens_servico WHERE id = ?',
     [id]
   );

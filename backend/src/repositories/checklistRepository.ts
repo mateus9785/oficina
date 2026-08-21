@@ -1,5 +1,6 @@
-import { PoolConnection, RowDataPacket } from 'mysql2/promise';
+import { PoolConnection } from 'mysql2/promise';
 import { pool } from '../config/database';
+import { ChecklistEntradaRow } from '../types/database';
 
 function exec(conn?: PoolConnection) {
   return conn ? conn.execute.bind(conn) : pool.execute.bind(pool);
@@ -14,8 +15,8 @@ export interface ChecklistItemData {
 export async function findByOrdemId(
   ordemId: string,
   conn?: PoolConnection
-): Promise<RowDataPacket[]> {
-  const [rows] = await exec(conn)<RowDataPacket[]>(
+): Promise<ChecklistEntradaRow[]> {
+  const [rows] = await exec(conn)<ChecklistEntradaRow[]>(
     'SELECT * FROM checklist_entrada WHERE ordem_id = ? ORDER BY id',
     [ordemId]
   );

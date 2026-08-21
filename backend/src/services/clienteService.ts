@@ -1,11 +1,11 @@
-import { RowDataPacket } from 'mysql2/promise';
 import { v4 as uuidv4 } from 'uuid';
 import * as clienteRepository from '../repositories/clienteRepository';
 import * as veiculoRepository from '../repositories/veiculoRepository';
 import { AppError } from '../middleware/errorHandler';
 import { paginatedResponse } from '../utils/pagination';
+import { ClienteRow, VeiculoRow } from '../types/database';
 
-function mapCliente(r: RowDataPacket) {
+function mapCliente(r: ClienteRow) {
   return {
     id: r.id,
     nome: r.nome,
@@ -24,15 +24,17 @@ function mapCliente(r: RowDataPacket) {
     dataCadastro: r.data_cadastro,
   };
 }
-function mapClientes(rows: RowDataPacket[]) {
+function mapClientes(rows: ClienteRow[]) {
   return rows.map(mapCliente);
 }
 
-function mapVeiculo(r: RowDataPacket) {
+// veiculos has no `tipo` column in schema.sql -- the original mapper read
+// r.tipo anyway (always undefined at runtime; mysql2 rows are permissive),
+// and the frontend's Veiculo type never had a `tipo` field to receive it.
+function mapVeiculo(r: VeiculoRow) {
   return {
     id: r.id,
     clienteId: r.cliente_id,
-    tipo: r.tipo,
     marca: r.marca,
     modelo: r.modelo,
     ano: r.ano,
@@ -41,7 +43,7 @@ function mapVeiculo(r: RowDataPacket) {
     observacoes: r.observacoes,
   };
 }
-function mapVeiculos(rows: RowDataPacket[]) {
+function mapVeiculos(rows: VeiculoRow[]) {
   return rows.map(mapVeiculo);
 }
 
