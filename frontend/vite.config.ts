@@ -19,6 +19,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-charts': ['recharts'],
           'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          'vendor-motion': ['motion'],
           'vendor-utils': ['date-fns', 'zustand', 'sonner', 'lucide-react', 'clsx'],
         },
       },
