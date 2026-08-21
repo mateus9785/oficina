@@ -2,6 +2,9 @@
   "name": "oficina-backend",
   "version": "1.0.0",
   "private": true,
+  "description": "REST API for Oficina, a repair-shop management system: clientes, veiculos, ordens de servico (kanban), estoque and financeiro.",
+  "author": "Mateus Oliveira de Almeida <mateusoliveira9785@gmail.com>",
+  "license": "MIT",
   "type": "commonjs",
   "engines": {
     "node": ">=20"

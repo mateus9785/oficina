@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "Repo-wide git hooks and lint-staged config shared by backend/ and frontend/ (not a workspace root -- the two subprojects have their own independent package.json/lockfile).",
+  "author": "Mateus Oliveira de Almeida <mateusoliveira9785@gmail.com>",
+  "license": "MIT",
   "scripts": {
     "prepare": "husky"
   },
