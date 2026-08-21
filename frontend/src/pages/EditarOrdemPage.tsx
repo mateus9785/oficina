@@ -14,11 +14,12 @@ import { useOrdemServicoStore } from '../stores/useOrdemServicoStore';
 import { useClienteStore } from '../stores/useClienteStore';
 import { useVeiculoStore } from '../stores/useVeiculoStore';
 import { useConfiguracoes } from '../stores/useConfiguracoes';
+import type { OrdemServico } from '../types';
 
 export function EditarOrdemPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { buscarOrdem, editarOrdem, adicionarItem, removerItem, fetchOrdens, ordens } = useOrdemServicoStore();
+  const { buscarOrdem, editarOrdem, adicionarItem, removerItem, editarItem, fetchOrdens, ordens } = useOrdemServicoStore();
   const { fetchClientes, clientes } = useClienteStore();
   const { fetchVeiculos, veiculos } = useVeiculoStore();
   const { config, fetchConfiguracoes } = useConfiguracoes();
@@ -84,7 +85,7 @@ export function EditarOrdemPage() {
 
     setSalvando(true);
     try {
-      const payload: any = {
+      const payload: Partial<OrdemServico> = {
         descricao,
         descontoPercentual: desconto,
       };

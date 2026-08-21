@@ -14,7 +14,7 @@ import { useVeiculoStore } from '../stores/useVeiculoStore';
 import { useOrdemServicoStore } from '../stores/useOrdemServicoStore';
 import { useConfiguracoes } from '../stores/useConfiguracoes';
 import { api } from '../lib/api';
-import type { ItemOS, AnexoOS } from '../types';
+import type { ItemOS, AnexoOS, OrdemServico } from '../types';
 
 interface LocalItem extends Omit<ItemOS, 'id'> {
   _localId: string;
@@ -90,18 +90,22 @@ export function NovaOrdemPage() {
 
     setSalvando(true);
     try {
-      const payload: any = {
+      const payload: Omit<
+        OrdemServico,
+        'id' | 'numero' | 'itens' | 'checklistEntrada' | 'dataFinalizacao'
+      > = {
         descricao: descricao.trim() || '',
         status: 'aguardando_aprovacao',
         dataAbertura: new Date().toISOString(),
         descontoPercentual: desconto,
+        nomeCliente: '',
+        descricaoVeiculo: '',
+        clienteId: null,
+        veiculoId: null,
+        kmEntrada: 0,
       };
 
-      if (avulso) {
-        payload.clienteId = null;
-        payload.veiculoId = null;
-        payload.kmEntrada = 0;
-      } else {
+      if (!avulso) {
         payload.clienteId = clienteId;
         payload.veiculoId = veiculoId;
         payload.kmEntrada = Number(kmEntrada);

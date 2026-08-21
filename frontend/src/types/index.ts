@@ -86,7 +86,7 @@ export interface OrdemServico {
   arquivado?: boolean;
   dataAbertura: string;
   dataFinalizacao?: string;
-  previsaoEntrega?: string;
+  previsaoEntrega?: string | null;
   descricao: string;
   itens: ItemOS[];
   checklistEntrada: ChecklistDano[];
