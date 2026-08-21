@@ -10,6 +10,7 @@ const columnMigrations: { table: string; column: string; definition: string }[] 
   { table: 'historico_precos', column: 'quantidade', definition: 'INT NOT NULL DEFAULT 0' },
   { table: 'historico_precos', column: 'valor_total', definition: 'DECIMAL(10,2) NOT NULL DEFAULT 0.00' },
   { table: 'historico_precos', column: 'preco_venda', definition: 'DECIMAL(10,2) NOT NULL DEFAULT 0.00' },
+  { table: 'ordens_servico', column: 'arquivado', definition: 'TINYINT(1) NOT NULL DEFAULT 0' },
 ];
 
 async function migrate() {

@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS ordens_servico (
   descricao_veiculo   VARCHAR(120)  NOT NULL DEFAULT '',
   desconto_percentual DECIMAL(5,2)  NOT NULL DEFAULT 0.00,
   status              ENUM('aguardando_aprovacao','aguardando_peca','em_execucao','pronto_retirada','finalizado') NOT NULL DEFAULT 'aguardando_aprovacao',
+  arquivado           TINYINT(1)    NOT NULL DEFAULT 0,
   data_abertura       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   data_finalizacao    DATETIME      NULL,
   descricao           VARCHAR(2000) NOT NULL DEFAULT '',
@@ -131,6 +132,7 @@ CREATE TABLE IF NOT EXISTS ordens_servico (
   KEY idx_os_cliente (cliente_id),
   KEY idx_os_veiculo (veiculo_id),
   KEY idx_os_status (status),
+  KEY idx_os_arquivado (arquivado),
   CONSTRAINT fk_os_cliente FOREIGN KEY (cliente_id) REFERENCES clientes (id),
   CONSTRAINT fk_os_veiculo FOREIGN KEY (veiculo_id) REFERENCES veiculos (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

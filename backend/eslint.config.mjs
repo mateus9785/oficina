@@ -5,11 +5,24 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    // src/controllers/** still has raw SQL and `as any` casts everywhere;
-    // clientes/ordens get cleaned up (and un-ignored) in the
-    // refactor/backend-services-repositories and refactor/type-mysql-rows
-    // phases, the other 10 controllers stay out of scope for this pass.
-    ignores: ['dist/**', 'node_modules/**', 'src/controllers/**'],
+    // The remaining 10 controllers still inline raw SQL and `as any` casts;
+    // clientes/ordens were cleaned up in refactor/backend-services-repositories
+    // and refactor/type-mysql-rows. The other 10 stay out of scope for this
+    // portfolio pass.
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'src/controllers/anexos.controller.ts',
+      'src/controllers/auth.controller.ts',
+      'src/controllers/configuracoes.controller.ts',
+      'src/controllers/estoque.controller.ts',
+      'src/controllers/financeiro.controller.ts',
+      'src/controllers/notificacoes.controller.ts',
+      'src/controllers/recorrentes.controller.ts',
+      'src/controllers/relatorios.controller.ts',
+      'src/controllers/usuarios.controller.ts',
+      'src/controllers/veiculos.controller.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
