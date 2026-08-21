@@ -8,10 +8,11 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
+    "test": "vitest run",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts"
   },
@@ -40,13 +41,16 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^20.11.0",
     "@types/node-cron": "^3.0.11",
+    "@types/supertest": "^7.2.1",
     "@types/uuid": "^9.0.7",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.11.0",
     "prettier": "^3.9.6",
+    "supertest": "^7.2.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
-    "typescript-eslint": "^8.67.0"
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.11"
   }
 }
