@@ -11,6 +11,28 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: oficina
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: oficina
+      JWT_SECRET: ci-test-secret-not-for-production
+      JWT_REFRESH_SECRET: ci-test-refresh-secret-not-for-production
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
 
@@ -21,7 +43,9 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
+      - run: npm run db:migrate
       - run: npm run lint
+      - run: npm test
       - run: npm run build
 
   frontend:
@@ -40,4 +64,5 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
+      - run: npm test
       - run: npm run build
