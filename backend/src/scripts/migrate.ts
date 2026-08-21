@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import mysql from 'mysql2/promise';
+import mysql, { RowDataPacket } from 'mysql2/promise';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -28,12 +28,12 @@ async function migrate() {
 
   // Apply column migrations idempotently
   for (const { table, column, definition } of columnMigrations) {
-    const [rows] = await conn.query(
+    const [rows] = await conn.query<(RowDataPacket & { cnt: number })[]>(
       `SELECT COUNT(*) as cnt FROM INFORMATION_SCHEMA.COLUMNS
        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
       [table, column]
     );
-    const exists = (rows as any[])[0].cnt > 0;
+    const exists = rows[0].cnt > 0;
     if (!exists) {
       await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
       console.log(`✓ Coluna ${table}.${column} adicionada.`);

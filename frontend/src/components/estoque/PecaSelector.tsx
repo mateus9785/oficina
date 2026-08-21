@@ -23,7 +23,7 @@ export function PecaSelector({ onSelect }: PecaSelectorProps) {
     return pecas.filter((p) => p.nome.toLowerCase().includes(q)).slice(0, 10);
   }, [pecas, search]);
 
-  function handleBlur(e: React.FocusEvent) {
+  function handleBlur() {
     // relatedTarget é null quando foco vai para fora do browser ou para elemento não-focável
     // usamos setTimeout para deixar o onClick dos botões disparar primeiro
     setTimeout(() => {
