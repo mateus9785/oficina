@@ -1,7 +1,10 @@
 {
-  "name": "oficina",
+  "name": "oficina-frontend",
   "private": true,
   "version": "0.0.0",
+  "description": "Frontend for Oficina, a repair-shop management system: clientes, veiculos, ordens de servico (kanban), estoque and financeiro.",
+  "author": "Mateus Oliveira de Almeida <mateusoliveira9785@gmail.com>",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=20"
